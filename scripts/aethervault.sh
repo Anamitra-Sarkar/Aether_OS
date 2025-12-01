@@ -149,11 +149,11 @@ run_backup() {
     # Create backup directory
     mkdir -p "$backup_dir"
     
-    # Build rsync command
-    local rsync_opts="-avh --progress --delete --exclude-from=$EXCLUDE_FILE"
+    # Build rsync command as array for safe execution
+    local -a rsync_cmd=("rsync" "-avh" "--progress" "--delete" "--exclude-from=$EXCLUDE_FILE")
     
     if [[ "$dry_run" == "true" ]]; then
-        rsync_opts="$rsync_opts --dry-run"
+        rsync_cmd+=("--dry-run")
         log_info "DRY RUN - no changes will be made"
     fi
     
@@ -164,8 +164,7 @@ run_backup() {
     echo -e "${CYAN}═══════════════════════════════════════════${RESET}"
     echo ""
     
-    # shellcheck disable=SC2086
-    if rsync $rsync_opts "$HOME/" "$backup_dir/" 2>&1 | tee -a "$LOG_FILE"; then
+    if "${rsync_cmd[@]}" "$HOME/" "$backup_dir/" 2>&1 | tee -a "$LOG_FILE"; then
         log_success "Backup completed successfully!"
         
         # Save metadata

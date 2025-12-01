@@ -129,13 +129,22 @@ install_security_updates() {
     local release
     release=$(lsb_release -cs 2>/dev/null || echo "noble")
     
-    # Use apt with specific origin for security updates
-    apt-get -s dist-upgrade 2>/dev/null | grep -i "^Inst" | grep -i "security" | awk '{print $2}' | while read -r pkg; do
+    # Get list of security packages to update
+    local security_packages
+    security_packages=$(apt-get -s dist-upgrade 2>/dev/null | grep -i "^Inst" | grep -i "security" | awk '{print $2}')
+    
+    if [[ -z "$security_packages" ]]; then
+        log_info "No security updates to install"
+        return 0
+    fi
+    
+    # Install security packages
+    for pkg in $security_packages; do
         if [[ -n "$pkg" ]]; then
             log_info "Upgrading security package: $pkg"
-            apt-get install -y --only-upgrade "$pkg" 2>&1 | while read -r line; do
-                log "$line"
-            done
+            apt-get install -y --only-upgrade "$pkg" 2>&1 || {
+                log_error "Failed to upgrade: $pkg"
+            }
         fi
     done
 

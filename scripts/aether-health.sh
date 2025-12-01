@@ -204,7 +204,19 @@ check_firewall() {
 
     if command -v ufw &>/dev/null; then
         local status
-        status=$(sudo ufw status 2>/dev/null | head -1 || echo "unknown")
+        # Check firewall status without requiring sudo if possible
+        if [[ $EUID -eq 0 ]]; then
+            status=$(ufw status 2>/dev/null | head -1 || echo "unknown")
+        else
+            # Non-root users can still check if ufw is installed and running
+            # by checking the systemd service status
+            if systemctl is-active --quiet ufw 2>/dev/null; then
+                status="Status: active"
+            else
+                status="Status: inactive"
+            fi
+        fi
+        
         if echo "$status" | grep -qi "active"; then
             log_pass "Firewall (ufw) is active"
         else
