@@ -22,7 +22,7 @@ strings:
 images:
     productLogo:         "/usr/share/pixmaps/aetheros-logo.svg"
     productIcon:         "/usr/share/pixmaps/aetheros-logo.svg"
-    productWelcome:      "/usr/share/backgrounds/aetheros/wallpaper-4k.png"
+    productWelcome:      "/usr/share/backgrounds/aetheros/aetheros-default-dark.svg"
 
 slideshow:               "show.qml"
 slideshowAPI: 2

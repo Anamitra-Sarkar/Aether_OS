@@ -9,9 +9,13 @@
 </p>
 
 <p align="center">
+  <em>Status: v0.1 Alpha</em>
+</p>
+
+<p align="center">
   <a href="#overview">Overview</a> •
   <a href="#features">Features</a> •
-  <a href="#design-tokens">Design Tokens</a> •
+  <a href="#screenshots">Screenshots</a> •
   <a href="#building">Building</a> •
   <a href="#testing">Testing</a> •
   <a href="#installation">Installation</a> •
@@ -23,6 +27,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
+  <img src="https://img.shields.io/badge/version-0.1%20Alpha-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
 ---
@@ -197,15 +203,29 @@ This will:
 
 # Roadmap
 
-* [ ] Fix kernel/initrd bundle for ISO build pipeline
-* [ ] AetherOS Theme Pack (light/dark, icons, wallpapers)
-* [ ] Custom SDDM Login Theme
-* [ ] Aether Control Center (Quick Settings, Power, Night Light)
-* [ ] First-Run Wizard (theme, privacy, app bundles)
-* [ ] App Bundles (Core, Dev, Media, Gaming)
-* [ ] Performance presets and telemetry-free diagnostics
-* [ ] Calamares installer branding theme
-* [ ] First public alpha ISO release with screenshots & guide
+## v0.1 Alpha (Current) ✅
+* [x] Fix kernel/initrd bundle for ISO build pipeline
+* [x] AetherOS Theme Pack (light/dark, icons, wallpapers)
+* [x] Custom SDDM Login Theme
+* [x] Aether Control Center (Quick Settings, Power, Night Light)
+* [x] First-Run Wizard (theme, privacy, app bundles)
+* [x] App Bundles (Core, Dev, Media, Gaming)
+* [x] Performance optimization scripts (zram, sysctl tuning)
+* [x] Calamares installer branding theme
+* [x] Build system with CI/CD pipeline
+
+## v0.2 (Planned)
+* [ ] Full Calamares slideshow
+* [ ] Additional wallpapers and icon variants
+* [ ] Bug fixes from alpha feedback
+* [ ] Expanded accessibility features
+* [ ] Performance improvements
+
+## v0.3 (Future)
+* [ ] Additional app integrations
+* [ ] More power management options
+* [ ] Custom kernel options
+* [ ] ARM64 support exploration
 
 ---
 
