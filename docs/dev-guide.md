@@ -334,6 +334,58 @@ qemu-system-x86_64 -m 4096 -cdrom aetheros.iso
 cat /tmp/qemu-serial.log
 ```
 
+## Security
+
+### Firewall (UFW)
+
+AetherOS comes with UFW (Uncomplicated Firewall) enabled by default:
+- Deny incoming connections
+- Allow outgoing connections
+
+To manage the firewall:
+```bash
+# Check status
+sudo ufw status
+
+# Open a port
+sudo ufw allow 22/tcp
+
+# Use GUI
+gufw
+```
+
+### Security Updates
+
+AetherOS includes automatic security update checking:
+
+**Timer**: `aetheros-security-check.timer`
+- Runs weekly on Monday at 9:00 AM
+- Checks for security updates and notifies user
+- Does not auto-install by default
+
+**Manual commands**:
+```bash
+# Check for security updates
+sudo /usr/share/aetheros/scripts/aether-security-update.sh check
+
+# List available security updates
+sudo /usr/share/aetheros/scripts/aether-security-update.sh list
+
+# Install security updates
+sudo /usr/share/aetheros/scripts/aether-security-update.sh install
+```
+
+### AppArmor
+
+AppArmor is enabled by default for sandboxing applications:
+```bash
+# Check AppArmor status
+sudo aa-status
+
+# View loaded profiles
+sudo aa-status --profiles
+```
+
 ## Resources
 
 - [Ubuntu Packaging Guide](https://packaging.ubuntu.com/)

@@ -250,7 +250,7 @@ apt-get install -y --no-install-recommends \
 # Install additional packages (some may be unavailable, log failures but continue)
 echo "Installing additional packages..."
 FAILED_PACKAGES=""
-for pkg in network-manager pipewire pipewire-pulse wireplumber firefox git curl wget vim nano htop neofetch bash-completion fonts-noto breeze breeze-gtk-theme breeze-icon-theme breeze-cursor-theme grub-pc-bin grub-efi-amd64-bin casper discover flatpak; do
+for pkg in network-manager pipewire pipewire-pulse wireplumber firefox git curl wget vim nano htop neofetch bash-completion fonts-noto breeze breeze-gtk-theme breeze-icon-theme breeze-cursor-theme grub-pc-bin grub-efi-amd64-bin casper discover flatpak ufw gufw apparmor apparmor-utils; do
     if ! apt-get install -y "\$pkg" 2>/dev/null; then
         FAILED_PACKAGES="\$FAILED_PACKAGES \$pkg"
         echo "Warning: Failed to install \$pkg"
@@ -594,6 +594,56 @@ EOF
 }
 
 # =============================================================================
+# Configure Security (Firewall, AppArmor)
+# =============================================================================
+configure_security() {
+    log_section "Configuring Security"
+
+    # Configure UFW defaults
+    chroot "$CHROOT_DIR" /bin/bash << 'EOF'
+set -e
+
+# Enable UFW with deny incoming, allow outgoing
+if command -v ufw &>/dev/null; then
+    echo "Configuring UFW firewall..."
+    ufw default deny incoming
+    ufw default allow outgoing
+    # Enable UFW (it will be active on boot)
+    ufw --force enable
+    echo "UFW configured: deny incoming, allow outgoing"
+fi
+
+# Ensure AppArmor is enabled
+if command -v aa-status &>/dev/null; then
+    echo "AppArmor is available"
+    systemctl enable apparmor || true
+fi
+EOF
+
+    # Copy AppArmor profiles
+    if [[ -d "$REPO_ROOT/configs/apparmor.d" ]]; then
+        mkdir -p "$CHROOT_DIR/etc/apparmor.d"
+        cp -r "$REPO_ROOT/configs/apparmor.d/"* "$CHROOT_DIR/etc/apparmor.d/" 2>/dev/null || true
+        log "AppArmor profiles copied"
+    fi
+
+    # Copy security update systemd units
+    if [[ -d "$REPO_ROOT/opt/systemd" ]]; then
+        mkdir -p "$CHROOT_DIR/etc/systemd/system"
+        cp "$REPO_ROOT/opt/systemd/aetheros-security-check.service" "$CHROOT_DIR/etc/systemd/system/" 2>/dev/null || true
+        cp "$REPO_ROOT/opt/systemd/aetheros-security-check.timer" "$CHROOT_DIR/etc/systemd/system/" 2>/dev/null || true
+        
+        # Enable the security check timer
+        chroot "$CHROOT_DIR" /bin/bash << 'EOF'
+systemctl enable aetheros-security-check.timer 2>/dev/null || true
+EOF
+        log "Security update timer installed and enabled"
+    fi
+
+    log "Security configured"
+}
+
+# =============================================================================
 # Finalize Chroot
 # =============================================================================
 finalize_chroot() {
@@ -633,6 +683,7 @@ main() {
     create_live_user
     configure_sddm
     configure_calamares
+    configure_security
     finalize_chroot
     
     log_section "Chroot Setup Complete"

@@ -1,0 +1,16 @@
+[Unit]
+Description=AetherOS Security Update Check
+Documentation=man:apt-get(8)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/aetheros/scripts/aether-security-update.sh notify
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+PrivateTmp=yes
+ProtectSystem=full
+NoNewPrivileges=no
