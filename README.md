@@ -20,6 +20,7 @@
   <a href="#testing">Testing</a> •
   <a href="#installation">Installation</a> •
   <a href="#default-applications">Default Apps</a> •
+  <a href="#troubleshooting">Troubleshooting</a> •
   <a href="#roadmap">Roadmap</a> •
   <a href="#contributing">Contributing</a>
 </p>
@@ -226,6 +227,33 @@ This will:
 | Email           | Thunderbird        |
 | Software Center | Discover + Flatpak |
 | Backup          | Timeshift          |
+
+---
+
+# Troubleshooting
+
+Having issues? Check our comprehensive troubleshooting guide:
+
+📖 **[Troubleshooting Guide](docs/troubleshooting.md)**
+
+Common topics covered:
+- Display & GPU issues (nomodeset, X11/Wayland switching)
+- Desktop environment problems (restart Plasma, reset settings)
+- Login issues (restart SDDM, password reset)
+- Performance optimization
+- Network troubleshooting
+
+**Quick Commands:**
+```bash
+# Restart desktop
+killall plasmashell && plasmashell &
+
+# Restart login manager
+sudo systemctl restart sddm
+
+# Run system health check
+sudo /opt/aetheros/aether-health.sh
+```
 
 ---
 
