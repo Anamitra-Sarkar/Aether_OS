@@ -1,5 +1,5 @@
 /*
- * AetherOS Updater
+ * AetherOS Updater v1.0 RC
  * Simple update management UI
  * 
  * Features:
