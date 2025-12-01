@@ -65,7 +65,12 @@ start_qemu() {
     log "  CPUs: $CPUS"
     log "  Timeout: ${TIMEOUT}s"
     
+    # Ensure serial log directory exists
+    mkdir -p "$ARTIFACTS_DIR"
+    local serial_log="$ARTIFACTS_DIR/qemu-serial.log"
+    
     # Start QEMU in background with VNC
+    log "Attempting to start QEMU with KVM acceleration..."
     qemu-system-x86_64 \
         -enable-kvm \
         -m "$RAM" \
@@ -74,7 +79,7 @@ start_qemu() {
         -boot d \
         -display vnc=:0 \
         -monitor unix:/tmp/qemu-monitor.sock,server,nowait \
-        -serial file:/tmp/qemu-serial.log \
+        -serial file:"$serial_log" \
         -device virtio-vga-gl \
         -device virtio-net-pci,netdev=net0 \
         -netdev user,id=net0 \
@@ -90,7 +95,7 @@ start_qemu() {
                 -boot d \
                 -display vnc=:0 \
                 -monitor unix:/tmp/qemu-monitor.sock,server,nowait \
-                -serial file:/tmp/qemu-serial.log \
+                -serial file:"$serial_log" \
                 -device virtio-vga \
                 -device virtio-net-pci,netdev=net0 \
                 -netdev user,id=net0 \
@@ -105,48 +110,57 @@ start_qemu() {
         exit 1
     fi
     
-    log "QEMU started (PID: $QEMU_PID)"
+    log "✓ QEMU started successfully (PID: $QEMU_PID)"
+    log "  Serial output: $serial_log"
 }
 
 # =============================================================================
 # Wait for Desktop
 # =============================================================================
 wait_for_desktop() {
-    log "Waiting for desktop to become ready..."
+    log "Waiting for desktop to become ready (timeout: ${TIMEOUT}s)..."
     
     local start_time
     start_time=$(date +%s)
     local current_time
     local elapsed
+    local serial_log="$ARTIFACTS_DIR/qemu-serial.log"
     
     while true; do
         current_time=$(date +%s)
         elapsed=$((current_time - start_time))
         
         if [[ $elapsed -ge $TIMEOUT ]]; then
-            log_error "Timeout waiting for desktop (${TIMEOUT}s)"
+            log_error "Timeout reached after ${TIMEOUT}s waiting for desktop"
+            log_error "Check serial log for details: $serial_log"
             return 1
         fi
         
         # Check if QEMU is still running
         if ! pgrep -f "qemu-system.*$ISO_BASENAME" &>/dev/null; then
-            log_error "QEMU process died"
+            log_error "QEMU process died unexpectedly"
+            log_error "Check serial log for details: $serial_log"
             return 1
         fi
         
         # Check serial log for boot progress
-        if [[ -f /tmp/qemu-serial.log ]]; then
-            if grep -q "plasmashell" /tmp/qemu-serial.log 2>/dev/null || \
-               grep -q "sddm" /tmp/qemu-serial.log 2>/dev/null || \
-               grep -q "graphical.target" /tmp/qemu-serial.log 2>/dev/null; then
-                log "Desktop indicators found in boot log"
+        if [[ -f "$serial_log" ]]; then
+            if grep -q "plasmashell" "$serial_log" 2>/dev/null || \
+               grep -q "sddm" "$serial_log" 2>/dev/null || \
+               grep -q "graphical.target" "$serial_log" 2>/dev/null; then
+                log "✓ Desktop indicators found in boot log after ${elapsed}s"
                 # Wait a bit more for desktop to stabilize
+                log "Waiting additional 10s for desktop to stabilize..."
                 sleep 10
                 return 0
             fi
         fi
         
-        log "Waiting... (${elapsed}s / ${TIMEOUT}s)"
+        # Log progress every 15 seconds
+        if [[ $((elapsed % 15)) -eq 0 ]] && [[ $elapsed -gt 0 ]]; then
+            log "Still waiting for desktop... (${elapsed}s / ${TIMEOUT}s)"
+        fi
+        
         sleep 5
     done
 }
@@ -209,12 +223,13 @@ cleanup() {
     
     # Kill QEMU - use broader pattern to catch any QEMU instance we started
     if pgrep -f "qemu-system.*-cdrom" &>/dev/null; then
+        log "Stopping QEMU process..."
         pkill -f "qemu-system.*-cdrom" || true
     fi
     
-    # Clean up temp files
+    # Clean up temp files (but keep serial log in artifacts)
     rm -f /tmp/qemu-monitor.sock
-    rm -f /tmp/qemu-serial.log
+    # Don't remove /tmp/qemu-serial.log - we've already moved it to artifacts
 }
 
 trap cleanup EXIT

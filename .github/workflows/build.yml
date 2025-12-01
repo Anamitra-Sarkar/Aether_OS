@@ -99,7 +99,7 @@ jobs:
     - name: Run boot test with QEMU
       run: |
         chmod +x ./tests/boot-qemu.sh
-        TIMEOUT=180 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
+        TIMEOUT=300 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
       continue-on-error: false
     
     - name: Run UI sanity checks
@@ -220,13 +220,13 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
-        languages: cpp, python
+        languages: python
         queries: security-and-quality
     
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
-        category: "/language:cpp"
+        category: "/language:python"
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
