@@ -32,6 +32,9 @@ ApplicationWindow {
     readonly property color textMuted: "#9CA3AF"
     readonly property int animDuration: 150
     
+    // Links
+    readonly property string githubUrl: "https://github.com/Anamitra-Sarkar/Aether_OS"
+    
     color: bgDark
     
     // Current page index
@@ -998,11 +1001,12 @@ ApplicationWindow {
                         
                         // GitHub button
                         Button {
+                            id: githubButton
                             text: "View Project on GitHub"
                             Layout.alignment: Qt.AlignHCenter
                             Layout.topMargin: 8
                             onClicked: {
-                                Qt.openUrlExternally("https://github.com/Anamitra-Sarkar/Aether_OS")
+                                Qt.openUrlExternally(root.githubUrl)
                             }
                             background: Rectangle {
                                 radius: 8
@@ -1015,7 +1019,7 @@ ApplicationWindow {
                                     font.pixelSize: 14
                                 }
                                 Text {
-                                    text: parent.parent.text
+                                    text: githubButton.text
                                     color: "white"
                                     font.pixelSize: 13
                                     font.weight: Font.Medium

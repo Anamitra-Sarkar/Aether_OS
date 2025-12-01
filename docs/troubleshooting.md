@@ -353,7 +353,11 @@ If AetherOS won't boot:
 
 3. **Check disk integrity:**
    ```bash
-   sudo fsck /dev/sdXY  # Replace with your partition
+   # First, identify your partition
+   lsblk  # or use: sudo fdisk -l
+   
+   # Then check the filesystem
+   sudo fsck /dev/sdXY  # Replace XY with your partition (e.g., sda1, nvme0n1p1)
    ```
 
 ---
