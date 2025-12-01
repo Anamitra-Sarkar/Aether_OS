@@ -227,9 +227,8 @@ cleanup() {
         pkill -f "qemu-system.*-cdrom" || true
     fi
     
-    # Clean up temp files (but keep serial log in artifacts)
+    # Clean up temp files (serial log already saved to artifacts directory)
     rm -f /tmp/qemu-monitor.sock
-    # Don't remove /tmp/qemu-serial.log - we've already moved it to artifacts
 }
 
 trap cleanup EXIT

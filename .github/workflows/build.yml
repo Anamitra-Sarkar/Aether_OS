@@ -217,16 +217,27 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: python
-        queries: security-and-quality
+    # Note: CodeQL is disabled as the repository contains primarily shell scripts and QML,
+    # which are not currently supported by CodeQL. Re-enable when supported languages
+    # (Python, JavaScript, etc.) are added to the project.
+    # 
+    # - name: Initialize CodeQL
+    #   uses: github/codeql-action/init@v3
+    #   with:
+    #     languages: python
+    #     queries: security-and-quality
+    # 
+    # - name: Perform CodeQL Analysis
+    #   uses: github/codeql-action/analyze@v3
+    #   with:
+    #     category: "/language:python"
     
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:python"
+    - name: CodeQL Status
+      run: |
+        echo "CodeQL is currently disabled for this repository."
+        echo "Languages present: Shell (bash), QML"
+        echo "CodeQL currently supports: C/C++, C#, Go, Java, JavaScript/TypeScript, Python, Ruby, Swift"
+        echo "Re-enable when supported languages are added to the project."
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
