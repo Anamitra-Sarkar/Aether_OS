@@ -370,6 +370,56 @@ rm -rf ~/.config/kwin*
 rm -rf ~/.local/share/plasma/
 ```
 
+## Switching to Stock Theme
+
+If you want to switch back to a stock Ubuntu/KDE theme:
+
+### Quick Method
+
+```bash
+# Reset to Breeze Dark
+kwriteconfig5 --file kdeglobals --group General --key ColorScheme "BreezeClassic"
+kwriteconfig5 --file kdeglobals --group Icons --key Theme "breeze"
+kwriteconfig5 --file kdeglobals --group KDE --key LookAndFeelPackage "org.kde.breezedark.desktop"
+
+# Restart Plasma
+kquitapp5 plasmashell && kstart5 plasmashell
+```
+
+### Full Reset
+
+```bash
+# Remove AetherOS theme files
+rm -f ~/.local/share/color-schemes/AetherDark.colors
+rm -f ~/.local/share/color-schemes/AetherLight.colors
+rm -rf ~/.config/latte/AetherOS.layout.latte
+
+# Reset to defaults
+rm -f ~/.config/kdeglobals
+rm -f ~/.config/plasmarc
+rm -f ~/.config/kwinrc
+rm -rf ~/.config/gtk-3.0/gtk.css
+rm -rf ~/.config/gtk-4.0/gtk.css
+
+# Restart Plasma
+kquitapp5 plasmashell && kstart5 plasmashell
+```
+
+### GTK Reset
+
+```bash
+# Reset GTK settings
+echo "[Settings]
+gtk-theme-name=Breeze-Dark
+gtk-icon-theme-name=breeze-dark
+gtk-font-name=Noto Sans 10
+gtk-cursor-theme-name=breeze_cursors
+gtk-application-prefer-dark-theme=1" > ~/.config/gtk-3.0/settings.ini
+
+rm -f ~/.config/gtk-3.0/gtk.css
+rm -f ~/.config/gtk-4.0/gtk.css
+```
+
 ## Troubleshooting
 
 ### Theme Not Applying
@@ -389,6 +439,42 @@ rm -rf ~/.local/share/plasma/
 1. Update icon cache: `gtk-update-icon-cache ~/.local/share/icons/mytheme/`
 2. Check icon theme setting
 3. Verify icon files exist
+
+### Latte Dock Not Starting
+
+1. Check if Latte is installed: `which latte-dock`
+2. Try starting manually: `latte-dock --layout AetherOS`
+3. Check logs: `journalctl --user -u plasma-latte_dock`
+
+## AetherOS Theme Assets
+
+### Location of Theme Files
+
+| Asset | System Location | User Location |
+|-------|----------------|---------------|
+| Color Schemes | `/usr/share/aetheros/themes/Aether/colors/` | `~/.local/share/color-schemes/` |
+| Wallpapers | `/usr/share/backgrounds/aetheros/` | `~/.local/share/wallpapers/` |
+| Icons | `/usr/share/icons/Aether/` | `~/.local/share/icons/Aether/` |
+| SDDM Theme | `/usr/share/sddm/themes/Aether/` | N/A |
+| Latte Layout | `/etc/skel/.config/latte/` | `~/.config/latte/` |
+| GTK CSS | `/etc/skel/.config/gtk-3.0/` | `~/.config/gtk-3.0/` |
+
+### Using the Theme Application Script
+
+AetherOS includes a script to quickly apply or switch themes:
+
+```bash
+# Apply dark theme (default)
+/usr/share/aetheros/scripts/apply-theme.sh
+
+# Apply light theme
+/usr/share/aetheros/scripts/apply-theme.sh --light
+
+# Apply only specific components
+/usr/share/aetheros/scripts/apply-theme.sh --wallpaper --dark
+/usr/share/aetheros/scripts/apply-theme.sh --icons
+/usr/share/aetheros/scripts/apply-theme.sh --gtk --light
+```
 
 ## Resources
 

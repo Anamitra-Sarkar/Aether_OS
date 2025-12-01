@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="terminalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1F26"/>
+      <stop offset="100%" style="stop-color:#0F1720"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Terminal window -->
+  <rect x="4" y="4" width="40" height="40" rx="6" fill="url(#terminalGradient)"/>
+  
+  <!-- Border -->
+  <rect x="4" y="4" width="40" height="40" rx="6" fill="none" stroke="#6C8CFF" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Title bar dots -->
+  <circle cx="12" cy="10" r="2" fill="#DA4453"/>
+  <circle cx="18" cy="10" r="2" fill="#F67400"/>
+  <circle cx="24" cy="10" r="2" fill="#27AE60"/>
+  
+  <!-- Prompt symbol -->
+  <text x="10" y="28" font-family="monospace" font-size="18" font-weight="bold" fill="#7AE7C7">$</text>
+  
+  <!-- Cursor block -->
+  <rect x="22" y="18" width="10" height="14" fill="#6C8CFF" opacity="0.7"/>
+  
+  <!-- Command text hint -->
+  <line x1="10" y1="36" x2="30" y2="36" stroke="#6C8CFF" stroke-width="2" opacity="0.3"/>
+</svg>

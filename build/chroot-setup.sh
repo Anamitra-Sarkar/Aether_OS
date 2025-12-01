@@ -192,7 +192,15 @@ apt-get install -y --no-install-recommends \
     ubuntu-standard \
     systemd \
     systemd-sysv \
-    dbus
+    dbus \
+    initramfs-tools
+
+# Generate initramfs for the installed kernel
+KERNEL_VERSION=\$(ls /lib/modules/ | head -1)
+if [ -n "\$KERNEL_VERSION" ]; then
+    echo "Generating initramfs for kernel \$KERNEL_VERSION..."
+    update-initramfs -c -k "\$KERNEL_VERSION"
+fi
 
 # Install KDE Plasma and desktop packages
 apt-get install -y --no-install-recommends \
@@ -236,32 +244,83 @@ copy_configurations() {
     mkdir -p "$CHROOT_DIR/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc"
     mkdir -p "$CHROOT_DIR/etc/skel/.config/kwinrc"
     mkdir -p "$CHROOT_DIR/etc/skel/.config/latte"
+    mkdir -p "$CHROOT_DIR/etc/skel/.config/gtk-3.0"
+    mkdir -p "$CHROOT_DIR/etc/skel/.config/gtk-4.0"
     mkdir -p "$CHROOT_DIR/etc/skel/.local/share/plasma/look-and-feel"
+    mkdir -p "$CHROOT_DIR/etc/skel/.local/share/color-schemes"
     
     # Copy KDE configurations
     if [[ -d "$REPO_ROOT/configs/kde" ]]; then
-        cp -r "$REPO_ROOT/configs/kde/"* "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
+        # Copy main config files
+        cp "$REPO_ROOT/configs/kde/kdeglobals" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
+        cp "$REPO_ROOT/configs/kde/kwinrc" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
+        cp "$REPO_ROOT/configs/kde/plasmarc" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
+        
+        # Copy Latte layout
+        if [[ -d "$REPO_ROOT/configs/kde/latte" ]]; then
+            cp -r "$REPO_ROOT/configs/kde/latte/"* "$CHROOT_DIR/etc/skel/.config/latte/" 2>/dev/null || true
+        fi
+        
+        # Copy color schemes
+        if [[ -d "$REPO_ROOT/configs/kde/themes/Aether/colors" ]]; then
+            cp "$REPO_ROOT/configs/kde/themes/Aether/colors/"*.colors "$CHROOT_DIR/etc/skel/.local/share/color-schemes/" 2>/dev/null || true
+        fi
+        
         log "KDE configurations copied"
     fi
     
-    # Copy SDDM configuration
+    # Copy GTK configurations
+    if [[ -d "$REPO_ROOT/configs/gtk" ]]; then
+        # GTK 3
+        if [[ -d "$REPO_ROOT/configs/gtk/gtk-3.0" ]]; then
+            cp -r "$REPO_ROOT/configs/gtk/gtk-3.0/"* "$CHROOT_DIR/etc/skel/.config/gtk-3.0/" 2>/dev/null || true
+        fi
+        
+        # GTK 4 (configs are in kde/gtk-4.0 for historical reasons)
+        if [[ -d "$REPO_ROOT/configs/kde/gtk-4.0" ]]; then
+            cp -r "$REPO_ROOT/configs/kde/gtk-4.0/"* "$CHROOT_DIR/etc/skel/.config/gtk-4.0/" 2>/dev/null || true
+        fi
+        
+        log "GTK configurations copied"
+    fi
+    
+    # Copy SDDM configuration and theme
     if [[ -d "$REPO_ROOT/configs/sddm" ]]; then
         mkdir -p "$CHROOT_DIR/etc/sddm.conf.d"
-        cp -r "$REPO_ROOT/configs/sddm/"* "$CHROOT_DIR/etc/sddm.conf.d/" 2>/dev/null || true
-        log "SDDM configurations copied"
+        mkdir -p "$CHROOT_DIR/usr/share/sddm/themes/Aether"
+        
+        # Copy config file
+        cp "$REPO_ROOT/configs/sddm/autologin.conf" "$CHROOT_DIR/etc/sddm.conf.d/" 2>/dev/null || true
+        
+        # Copy SDDM theme
+        if [[ -d "$REPO_ROOT/configs/sddm/Aether" ]]; then
+            cp -r "$REPO_ROOT/configs/sddm/Aether/"* "$CHROOT_DIR/usr/share/sddm/themes/Aether/" 2>/dev/null || true
+        fi
+        
+        log "SDDM configurations and theme copied"
     fi
     
     # Copy artwork
     if [[ -d "$REPO_ROOT/artwork" ]]; then
         mkdir -p "$CHROOT_DIR/usr/share/backgrounds/aetheros"
-        mkdir -p "$CHROOT_DIR/usr/share/icons/aetheros"
+        mkdir -p "$CHROOT_DIR/usr/share/icons/Aether"
         mkdir -p "$CHROOT_DIR/usr/share/pixmaps"
-        cp -r "$REPO_ROOT/artwork/"* "$CHROOT_DIR/usr/share/backgrounds/aetheros/" 2>/dev/null || true
+        
+        # Copy wallpapers
+        if [[ -d "$REPO_ROOT/artwork/wallpapers" ]]; then
+            cp -r "$REPO_ROOT/artwork/wallpapers/"* "$CHROOT_DIR/usr/share/backgrounds/aetheros/" 2>/dev/null || true
+        fi
+        
+        # Copy icons
+        if [[ -d "$REPO_ROOT/artwork/icons/Aether" ]]; then
+            cp -r "$REPO_ROOT/artwork/icons/Aether/"* "$CHROOT_DIR/usr/share/icons/Aether/" 2>/dev/null || true
+        fi
         
         # Copy logo to pixmaps
         if [[ -f "$REPO_ROOT/artwork/logo.svg" ]]; then
             cp "$REPO_ROOT/artwork/logo.svg" "$CHROOT_DIR/usr/share/pixmaps/aetheros-logo.svg"
         fi
+        
         log "Artwork copied"
     fi
     
@@ -273,11 +332,18 @@ copy_configurations() {
         log "Optimization scripts copied"
     fi
     
-    # Copy first-run scripts
+    # Copy first-run scripts and theme application script
     if [[ -d "$REPO_ROOT/scripts" ]]; then
         mkdir -p "$CHROOT_DIR/usr/share/aetheros/scripts"
         cp -r "$REPO_ROOT/scripts/"* "$CHROOT_DIR/usr/share/aetheros/scripts/" 2>/dev/null || true
         chmod +x "$CHROOT_DIR/usr/share/aetheros/scripts/"*.sh 2>/dev/null || true
+        
+        # Also copy theme files for apply-theme.sh
+        mkdir -p "$CHROOT_DIR/usr/share/aetheros/themes/Aether/colors"
+        if [[ -d "$REPO_ROOT/configs/kde/themes/Aether/colors" ]]; then
+            cp "$REPO_ROOT/configs/kde/themes/Aether/colors/"*.colors "$CHROOT_DIR/usr/share/aetheros/themes/Aether/colors/" 2>/dev/null || true
+        fi
+        
         log "Scripts copied"
     fi
     

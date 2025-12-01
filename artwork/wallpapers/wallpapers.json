@@ -1,0 +1,46 @@
+{
+  "wallpapers": [
+    {
+      "name": "aetheros-default-light",
+      "file": "aetheros-default-light.svg",
+      "description": "Default light theme wallpaper with soft gradient from Aether Blue to light neutral",
+      "mode": "light",
+      "default": true
+    },
+    {
+      "name": "aetheros-default-dark",
+      "file": "aetheros-default-dark.svg",
+      "description": "Default dark theme wallpaper with subtle blue and mint highlights",
+      "mode": "dark",
+      "default": true
+    },
+    {
+      "name": "aetheros-geometric",
+      "file": "aetheros-geometric.svg",
+      "description": "Minimal geometric pattern with grid lines and accent nodes",
+      "mode": "dark",
+      "default": false
+    },
+    {
+      "name": "aetheros-nebula",
+      "file": "aetheros-nebula.svg",
+      "description": "Abstract space/nebula style with star field and colorful clouds",
+      "mode": "dark",
+      "default": false
+    }
+  ],
+  "installation": {
+    "system_path": "/usr/share/backgrounds/aetheros/",
+    "user_path": "~/.local/share/wallpapers/"
+  },
+  "formats": {
+    "source": "SVG",
+    "recommended_export": "PNG at 3840x2160 for best quality",
+    "export_command": "inkscape --export-type=png --export-width=3840 --export-height=2160 input.svg"
+  },
+  "usage": {
+    "kde_plasma": "System Settings → Appearance → Wallpaper",
+    "sddm": "Set background in theme.conf or /etc/sddm.conf.d/",
+    "grub": "Convert to appropriate format for GRUB background"
+  }
+}

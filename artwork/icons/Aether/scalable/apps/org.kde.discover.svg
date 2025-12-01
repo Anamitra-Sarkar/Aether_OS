@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="discoverGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C8CFF"/>
+      <stop offset="100%" style="stop-color:#7AE7C7"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="20" fill="url(#discoverGradient)"/>
+  
+  <!-- Shopping bag shape -->
+  <path d="M16,18 L16,36 C16,38 17,39 19,39 L29,39 C31,39 32,38 32,36 L32,18 Z" fill="#FFFFFF"/>
+  
+  <!-- Bag handle -->
+  <path d="M18,18 C18,14 20,12 24,12 C28,12 30,14 30,18" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Plus sign -->
+  <line x1="24" y1="24" x2="24" y2="32" stroke="#6C8CFF" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="20" y1="28" x2="28" y2="28" stroke="#6C8CFF" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
