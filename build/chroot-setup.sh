@@ -276,7 +276,7 @@ copy_configurations() {
             cp -r "$REPO_ROOT/configs/gtk/gtk-3.0/"* "$CHROOT_DIR/etc/skel/.config/gtk-3.0/" 2>/dev/null || true
         fi
         
-        # GTK 4
+        # GTK 4 (configs are in kde/gtk-4.0 for historical reasons)
         if [[ -d "$REPO_ROOT/configs/kde/gtk-4.0" ]]; then
             cp -r "$REPO_ROOT/configs/kde/gtk-4.0/"* "$CHROOT_DIR/etc/skel/.config/gtk-4.0/" 2>/dev/null || true
         fi

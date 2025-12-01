@@ -23,12 +23,23 @@ Rectangle {
     readonly property color textSecondary: "#9CA3AF"
     readonly property color errorColor: "#DA4453"
     
+    // Background wallpaper paths with fallbacks
+    readonly property string bgPng: "/usr/share/backgrounds/aetheros/aetheros-default-dark.png"
+    readonly property string bgSvg: "/usr/share/backgrounds/aetheros/aetheros-default-dark.svg"
+    
     // Background image
     Image {
         id: background
         anchors.fill: parent
-        source: config.background || "/usr/share/backgrounds/aetheros/aetheros-default-dark.png"
+        source: config.background || bgPng
         fillMode: Image.PreserveAspectCrop
+        
+        // Fallback to SVG if PNG fails to load
+        onStatusChanged: {
+            if (status === Image.Error) {
+                source = config.backgroundFallback || bgSvg
+            }
+        }
         
         // Subtle blur for login readability
         layer.enabled: true

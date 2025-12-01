@@ -9,14 +9,11 @@ set -euo pipefail
 # =============================================================================
 # Configuration
 # =============================================================================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AETHER_CONFIG="/usr/share/aetheros"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 USER_DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-# Theme colors (for reference in terminal output)
-AETHER_BLUE="#6C8CFF"
-AETHER_MINT="#7AE7C7"
+# ANSI color codes for terminal output
 RESET="\033[0m"
 BLUE="\033[38;2;108;140;255m"
 MINT="\033[38;2;122;231;199m"
@@ -256,8 +253,13 @@ apply_latte_layout() {
     
     # Import layout
     if [[ -f "$USER_CONFIG/latte/AetherOS.layout.latte" ]]; then
-        latte-dock --import-layout "$USER_CONFIG/latte/AetherOS.layout.latte" 2>/dev/null || true
-        log_success "Latte Dock layout applied"
+        local import_output
+        if import_output=$(latte-dock --import-layout "$USER_CONFIG/latte/AetherOS.layout.latte" 2>&1); then
+            log_success "Latte Dock layout applied"
+        else
+            log "Latte layout import returned: $import_output"
+            log "Layout may still work - continuing..."
+        fi
     else
         log "Latte layout file not found"
     fi
@@ -271,7 +273,14 @@ restart_plasma() {
     
     if command -v kquitapp5 &>/dev/null && command -v kstart5 &>/dev/null; then
         kquitapp5 plasmashell 2>/dev/null || true
-        sleep 1
+        
+        # Wait for plasmashell to fully terminate (up to 5 seconds)
+        local count=0
+        while pgrep -x plasmashell > /dev/null 2>&1 && [[ $count -lt 10 ]]; do
+            sleep 0.5
+            ((count++))
+        done
+        
         kstart5 plasmashell 2>/dev/null &
         log_success "Plasma shell restarted"
     else
