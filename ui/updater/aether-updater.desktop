@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Aether Updater
+Comment=Check and install system updates
+Exec=/usr/share/aetheros/ui/updater/run.sh
+Icon=software-update-available
+Terminal=false
+Categories=System;Settings;
+Keywords=update;upgrade;software;package;

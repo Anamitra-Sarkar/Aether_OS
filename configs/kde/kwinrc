@@ -1,5 +1,6 @@
 # AetherOS KWin Configuration
-# Sets animation durations, blur settings, and compositor options
+# Sets animation durations, blur settings, compositor options, and window management
+# v0.2 - Enhanced tiling, snapping, and workspace management
 
 [Compositing]
 AnimationSpeed=3
@@ -15,6 +16,18 @@ XRenderSmoothScale=false
 MaxFPS=60
 RefreshRate=60
 VBlankTime=6000
+
+[Desktops]
+Id_1=1
+Id_2=2
+Id_3=3
+Id_4=4
+Name_1=Desktop 1
+Name_2=Desktop 2
+Name_3=Desktop 3
+Name_4=Desktop 4
+Number=4
+Rows=1
 
 [Effect-Blur]
 BlurStrength=6
@@ -35,6 +48,10 @@ BorderActivate=9
 [Effect-FlipSwitch]
 TabBox=false
 TabBoxAlternative=false
+
+[Effect-Overview]
+BorderActivate=9
+TouchBorderActivate=7
 
 [Effect-PresentWindows]
 BorderActivate=9
@@ -88,7 +105,7 @@ NightTemperature=4500
 [Plugins]
 blurEnabled=true
 contrastEnabled=true
-desktopchangeosdEnabled=false
+desktopchangeosdEnabled=true
 enforcedecoEnabled=true
 highlightwindowEnabled=true
 kwin4_effect_dimscreenEnabled=true

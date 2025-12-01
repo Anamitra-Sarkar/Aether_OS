@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Report a Problem
+Comment=Report an issue with AetherOS on GitHub
+Exec=xdg-open https://github.com/Anamitra-Sarkar/Aether_OS/issues/new
+Icon=dialog-error
+Terminal=false
+Categories=System;Utility;
+Keywords=bug;report;issue;problem;feedback;
