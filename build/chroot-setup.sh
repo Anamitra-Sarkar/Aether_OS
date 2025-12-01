@@ -187,7 +187,6 @@ apt-get upgrade -y
 # Install packages in smaller batches to avoid issues
 apt-get install -y --no-install-recommends \
     linux-image-generic \
-    linux-modules-extra-generic \
     linux-generic \
     linux-firmware \
     ubuntu-minimal \
@@ -197,6 +196,15 @@ apt-get install -y --no-install-recommends \
     dbus \
     initramfs-tools \
     casper
+
+# Install linux-modules-extra-generic if available (may not exist in all environments)
+if apt-cache show linux-modules-extra-generic >/dev/null 2>&1; then
+    echo "Installing linux-modules-extra-generic..."
+    apt-get install -y --no-install-recommends linux-modules-extra-generic
+else
+    echo "Warning: linux-modules-extra-generic package not available. Skipping."
+    echo "Note: Some kernel modules may not be included in the ISO."
+fi
 
 # Generate initramfs for all installed kernels
 echo "Generating initramfs for installed kernels..."

@@ -5,7 +5,8 @@
 # Core System
 # =============================================================================
 linux-image-generic
-linux-modules-extra-generic
+# linux-modules-extra-generic is handled separately in chroot-setup.sh with fallback logic
+# as it may not be available in all build environments (e.g., GitHub Actions runners)
 linux-generic
 linux-firmware
 initramfs-tools
