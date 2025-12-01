@@ -1,6 +1,10 @@
 # AetherOS Keyboard Shortcuts
 
-Quick reference for AetherOS keyboard shortcuts and gestures.
+Quick reference for keyboard shortcuts and touchpad gestures.
+
+> **Note**: `Meta` key = Windows key / Command key / Super key
+
+---
 
 ## Window Management
 
@@ -58,24 +62,17 @@ Quick reference for AetherOS keyboard shortcuts and gestures.
 | `Alt + Shift + Tab` | Switch windows (reverse) |
 | `Meta + D` | Show desktop |
 
-## System
-
-### Session
+## System & Launcher
 
 | Shortcut | Action |
 |----------|--------|
-| `Meta` | Open application launcher |
+| `Meta` | Application launcher |
 | `Meta + L` | Lock screen |
 | `Meta + Shift + Q` | Log out |
 | `Meta + V` | Clipboard manager |
-
-### Screenshots
-
-| Shortcut | Action |
-|----------|--------|
-| `Print` | Full screen screenshot |
-| `Meta + Print` | Active window screenshot |
-| `Meta + Shift + Print` | Region screenshot |
+| `Print` | Screenshot (full screen) |
+| `Meta + Print` | Screenshot (active window) |
+| `Meta + Shift + Print` | Screenshot (region) |
 
 ## Touchpad Gestures (Wayland)
 
@@ -113,4 +110,17 @@ Or edit `~/.config/kglobalshortcutsrc` directly.
 
 ---
 
-*AetherOS v0.2 - Designed for both keyboard-first power users and trackpad-friendly casual users.*
+## Applications
+
+Quick launch commonly used applications:
+
+| Application | Command |
+|-------------|---------|
+| File Manager | `Meta + E` (Dolphin) |
+| Terminal | `Ctrl + Alt + T` (Konsole) |
+| Browser | Set in System Settings |
+| Control Center | Launch from menu or dock |
+
+---
+
+**AetherOS v1.0** - Designed for both keyboard-first power users and trackpad-friendly casual users.

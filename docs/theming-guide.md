@@ -195,6 +195,57 @@ AetherOS uses Breeze icons with these additions:
 | 2 | `/usr/share/icons/` | System |
 | 3 | `/usr/share/pixmaps/` | Legacy |
 
+### Installing Custom Icon Packs
+
+To install a custom icon pack (e.g., Papirus, Numix, Tela):
+
+**Method 1: User installation (recommended)**
+
+```bash
+# Extract icon pack to user directory
+mkdir -p ~/.local/share/icons/
+tar -xf icon-pack.tar.gz -C ~/.local/share/icons/
+
+# Or clone from git
+git clone https://github.com/PapirusDevelopmentTeam/papirus-icon-theme.git
+cd papirus-icon-theme
+./install.sh
+
+# Update icon cache
+gtk-update-icon-cache ~/.local/share/icons/IconPackName/
+```
+
+**Method 2: System-wide installation**
+
+```bash
+# Extract to system icons directory
+sudo tar -xf icon-pack.tar.gz -C /usr/share/icons/
+
+# Update cache
+sudo gtk-update-icon-cache /usr/share/icons/IconPackName/
+```
+
+**Apply the icon theme:**
+
+```bash
+# Via command line
+kwriteconfig5 --file kdeglobals --group Icons --key Theme "IconPackName"
+
+# Or via GUI
+# System Settings → Appearance → Icons → Select your icon pack
+```
+
+**Verify installation:**
+
+```bash
+# List available icon themes
+ls ~/.local/share/icons/
+ls /usr/share/icons/
+
+# Check if theme is recognized
+gtk-query-settings gtk-icon-theme-name
+```
+
 ### Creating Custom Icons
 
 Icons should be SVG format and include these sizes:
