@@ -1,0 +1,30 @@
+# AetherOS .gitignore
+
+# Build artifacts
+build/chroot/
+build/iso/
+build/artifacts/
+build/*.log
+*.iso
+*.squashfs
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+tests/artifacts/
+
+# Generated files
+youros-customizations.tar.gz

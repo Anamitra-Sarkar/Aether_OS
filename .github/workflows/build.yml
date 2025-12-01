@@ -1,0 +1,174 @@
+name: Build AetherOS ISO
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      minimal:
+        description: 'Build minimal ISO for faster testing'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Limit permissions for security
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          debootstrap \
+          squashfs-tools \
+          xorriso \
+          grub-pc-bin \
+          grub-efi-amd64-bin \
+          mtools \
+          dosfstools \
+          isolinux \
+          syslinux-common
+    
+    - name: Build ISO
+      run: |
+        if [ "${{ inputs.minimal }}" == "true" ]; then
+          sudo ./build/build.sh --minimal
+        else
+          sudo ./build/build.sh
+        fi
+    
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aetheros-iso
+        path: build/artifacts/aetheros.iso
+        retention-days: 7
+        if-no-files-found: error
+    
+    - name: Upload checksum
+      uses: actions/upload-artifact@v4
+      with:
+        name: aetheros-checksum
+        path: build/artifacts/aetheros.iso.sha256
+        retention-days: 7
+    
+    - name: Upload build log
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-log
+        path: build/build.log
+        retention-days: 3
+
+  test:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Download ISO artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: aetheros-iso
+        path: build/artifacts
+    
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-system-x86 qemu-utils
+    
+    - name: Run UI sanity checks
+      run: |
+        chmod +x ./tests/ui-sanity.sh
+        ./tests/ui-sanity.sh || true
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: tests/artifacts/
+        retention-days: 3
+
+  lint:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install shellcheck
+      run: sudo apt-get install -y shellcheck
+    
+    - name: Lint shell scripts
+      run: |
+        find . -name "*.sh" -type f | while read script; do
+          echo "Checking: $script"
+          shellcheck -x "$script" || true
+        done
+    
+    - name: Check script permissions
+      run: |
+        echo "Checking executable permissions..."
+        for script in build/build.sh build/chroot-setup.sh opt/*.sh scripts/*.sh tests/*.sh ui/**/run.sh; do
+          if [ -f "$script" ]; then
+            if [ ! -x "$script" ]; then
+              echo "Warning: $script is not executable"
+            fi
+          fi
+        done
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, test]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Download ISO artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: aetheros-iso
+        path: build/artifacts
+    
+    - name: Download checksum
+      uses: actions/download-artifact@v4
+      with:
+        name: aetheros-checksum
+        path: build/artifacts
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          build/artifacts/aetheros.iso
+          build/artifacts/aetheros.iso.sha256
+        draft: true
+        prerelease: false
+        generate_release_notes: true

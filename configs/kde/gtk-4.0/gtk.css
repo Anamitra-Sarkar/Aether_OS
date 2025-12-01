@@ -1,0 +1,282 @@
+/* AetherOS GTK-4 Theme Override */
+/* Applies design tokens for consistency with Qt/Plasma theme */
+
+/* Import base Breeze Dark */
+@import url("resource:///org/gtk/libgtk/theme/Adwaita/Adwaita-dark.css");
+
+/* Color Variables */
+@define-color aether_accent #6C8CFF;
+@define-color aether_accent_secondary #7AE7C7;
+@define-color aether_bg_dark #0F1720;
+@define-color aether_bg_light #F6F8FA;
+@define-color aether_surface_dark #101317;
+@define-color aether_surface_light #FFFFFF;
+@define-color aether_text_dark #E5E7EB;
+@define-color aether_text_light #1F2937;
+
+/* Base Colors */
+@define-color theme_fg_color @aether_text_dark;
+@define-color theme_bg_color @aether_bg_dark;
+@define-color theme_text_color @aether_text_dark;
+@define-color theme_selected_bg_color @aether_accent;
+@define-color theme_selected_fg_color #FFFFFF;
+
+/* Window Background */
+window {
+    background-color: @aether_bg_dark;
+    color: @aether_text_dark;
+}
+
+/* Header Bar */
+headerbar {
+    background: linear-gradient(to bottom, alpha(@aether_surface_dark, 0.95), @aether_bg_dark);
+    border-bottom: 1px solid alpha(@aether_accent, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+headerbar:backdrop {
+    background: @aether_bg_dark;
+}
+
+/* Buttons */
+button {
+    border-radius: 10px;
+    padding: 8px 16px;
+    transition: all 150ms cubic-bezier(0.22, 1, 0.36, 1);
+    background: linear-gradient(to bottom, alpha(@aether_surface_dark, 0.8), alpha(@aether_surface_dark, 0.6));
+    border: 1px solid alpha(@aether_accent, 0.2);
+}
+
+button:hover {
+    background: linear-gradient(to bottom, alpha(@aether_accent, 0.3), alpha(@aether_accent, 0.1));
+    border-color: @aether_accent;
+    box-shadow: 0 0 8px alpha(@aether_accent, 0.3);
+}
+
+button:active {
+    background: alpha(@aether_accent, 0.4);
+    transform: scale(0.98);
+}
+
+button.suggested-action {
+    background: linear-gradient(to bottom, @aether_accent, shade(@aether_accent, 0.9));
+    color: white;
+    border: none;
+}
+
+button.suggested-action:hover {
+    background: linear-gradient(to bottom, shade(@aether_accent, 1.1), @aether_accent);
+    box-shadow: 0 4px 12px alpha(@aether_accent, 0.4);
+}
+
+button.destructive-action {
+    background: linear-gradient(to bottom, #E53935, #C62828);
+    color: white;
+    border: none;
+}
+
+/* Entry Fields */
+entry {
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: alpha(@aether_surface_dark, 0.6);
+    border: 1px solid alpha(@aether_text_dark, 0.2);
+    transition: all 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+entry:focus {
+    border-color: @aether_accent;
+    box-shadow: 0 0 0 3px alpha(@aether_accent, 0.2);
+}
+
+/* Lists and Views */
+listview, treeview {
+    background: transparent;
+}
+
+listview > row {
+    border-radius: 8px;
+    margin: 2px 4px;
+    padding: 8px 12px;
+    transition: background 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+listview > row:hover {
+    background: alpha(@aether_accent, 0.1);
+}
+
+listview > row:selected {
+    background: alpha(@aether_accent, 0.25);
+}
+
+/* Scrollbars */
+scrollbar {
+    background: transparent;
+    border: none;
+}
+
+scrollbar slider {
+    background: alpha(@aether_text_dark, 0.3);
+    border-radius: 6px;
+    min-width: 8px;
+    min-height: 8px;
+}
+
+scrollbar slider:hover {
+    background: alpha(@aether_accent, 0.5);
+}
+
+scrollbar slider:active {
+    background: @aether_accent;
+}
+
+/* Switches */
+switch {
+    border-radius: 14px;
+    background: alpha(@aether_surface_dark, 0.8);
+    border: 1px solid alpha(@aether_text_dark, 0.2);
+    min-width: 48px;
+    min-height: 28px;
+}
+
+switch:checked {
+    background: @aether_accent;
+    border-color: @aether_accent;
+}
+
+switch slider {
+    background: white;
+    border-radius: 50%;
+    min-width: 24px;
+    min-height: 24px;
+    margin: 1px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Check Buttons */
+checkbutton check {
+    border-radius: 6px;
+    min-width: 22px;
+    min-height: 22px;
+}
+
+checkbutton check:checked {
+    background: @aether_accent;
+    border-color: @aether_accent;
+}
+
+/* Radio Buttons */
+radiobutton radio {
+    border-radius: 50%;
+    min-width: 22px;
+    min-height: 22px;
+}
+
+radiobutton radio:checked {
+    background: @aether_accent;
+    border-color: @aether_accent;
+}
+
+/* Popovers and Menus */
+popover, menu {
+    background: @aether_surface_dark;
+    border-radius: 12px;
+    border: 1px solid alpha(@aether_accent, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+popover modelbutton:hover,
+menu menuitem:hover {
+    background: alpha(@aether_accent, 0.15);
+    border-radius: 8px;
+}
+
+/* Progress Bars */
+progressbar trough {
+    background: alpha(@aether_surface_dark, 0.6);
+    border-radius: 6px;
+}
+
+progressbar progress {
+    background: linear-gradient(to right, @aether_accent, @aether_accent_secondary);
+    border-radius: 6px;
+}
+
+/* Spinners */
+spinner {
+    color: @aether_accent;
+}
+
+/* Notebooks/Tabs */
+notebook header tab {
+    border-radius: 10px 10px 0 0;
+    padding: 8px 16px;
+    background: transparent;
+}
+
+notebook header tab:checked {
+    background: alpha(@aether_accent, 0.2);
+    border-bottom: 2px solid @aether_accent;
+}
+
+/* Sliders */
+scale trough {
+    background: alpha(@aether_surface_dark, 0.6);
+    border-radius: 6px;
+}
+
+scale highlight {
+    background: @aether_accent;
+    border-radius: 6px;
+}
+
+scale slider {
+    background: white;
+    border-radius: 50%;
+    min-width: 20px;
+    min-height: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Info Bars */
+infobar {
+    border-radius: 10px;
+    margin: 4px;
+}
+
+infobar.info {
+    background: alpha(@aether_accent, 0.2);
+    border: 1px solid @aether_accent;
+}
+
+infobar.warning {
+    background: alpha(#F59E0B, 0.2);
+    border: 1px solid #F59E0B;
+}
+
+infobar.error {
+    background: alpha(#EF4444, 0.2);
+    border: 1px solid #EF4444;
+}
+
+/* Tooltips */
+tooltip {
+    background: @aether_surface_dark;
+    border-radius: 8px;
+    border: 1px solid alpha(@aether_accent, 0.3);
+    padding: 8px 12px;
+}
+
+/* Window Decorations */
+decoration {
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0ms !important;
+        animation-duration: 0ms !important;
+    }
+}
