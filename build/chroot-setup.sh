@@ -186,6 +186,8 @@ apt-get upgrade -y
 
 # Install packages in smaller batches to avoid issues
 apt-get install -y --no-install-recommends \
+    linux-image-generic \
+    linux-modules-extra-generic \
     linux-generic \
     linux-firmware \
     ubuntu-minimal \
@@ -193,14 +195,39 @@ apt-get install -y --no-install-recommends \
     systemd \
     systemd-sysv \
     dbus \
-    initramfs-tools
+    initramfs-tools \
+    casper
 
-# Generate initramfs for the installed kernel
-KERNEL_VERSION=\$(ls /lib/modules/ | head -1)
-if [ -n "\$KERNEL_VERSION" ]; then
-    echo "Generating initramfs for kernel \$KERNEL_VERSION..."
-    update-initramfs -c -k "\$KERNEL_VERSION"
+# Generate initramfs for all installed kernels
+echo "Generating initramfs for installed kernels..."
+if [ -d /lib/modules ]; then
+    for KERNEL_VERSION in \$(ls /lib/modules/ | sort -V); do
+        if [ -d "/lib/modules/\$KERNEL_VERSION" ]; then
+            echo "Generating initramfs for kernel \$KERNEL_VERSION..."
+            update-initramfs -c -k "\$KERNEL_VERSION" || true
+        fi
+    done
 fi
+
+# Verify kernel and initrd exist
+echo "Verifying kernel and initrd..."
+VMLINUZ=\$(find /boot -name 'vmlinuz-*' -type f | sort -V | tail -1)
+INITRD=\$(find /boot -name 'initrd.img-*' -type f | sort -V | tail -1)
+
+if [ -z "\$VMLINUZ" ]; then
+    echo "ERROR: No kernel found in /boot"
+    ls -la /boot/
+    exit 1
+fi
+
+if [ -z "\$INITRD" ]; then
+    echo "ERROR: No initrd found in /boot"
+    ls -la /boot/
+    exit 1
+fi
+
+echo "Kernel found: \$VMLINUZ"
+echo "Initrd found: \$INITRD"
 
 # Install KDE Plasma and desktop packages
 apt-get install -y --no-install-recommends \
@@ -351,6 +378,24 @@ copy_configurations() {
     if [[ -d "$REPO_ROOT/ui" ]]; then
         mkdir -p "$CHROOT_DIR/usr/share/aetheros/ui"
         cp -r "$REPO_ROOT/ui/"* "$CHROOT_DIR/usr/share/aetheros/ui/" 2>/dev/null || true
+        
+        # Make run scripts executable
+        find "$CHROOT_DIR/usr/share/aetheros/ui" -name "run.sh" -exec chmod +x {} \; 2>/dev/null || true
+        
+        # Copy first-run wizard autostart
+        if [[ -f "$REPO_ROOT/ui/first-run-wizard/first-run-wizard.desktop" ]]; then
+            mkdir -p "$CHROOT_DIR/etc/xdg/autostart"
+            cp "$REPO_ROOT/ui/first-run-wizard/first-run-wizard.desktop" "$CHROOT_DIR/etc/xdg/autostart/"
+            log "First-run wizard autostart installed"
+        fi
+        
+        # Copy control center desktop file to applications
+        if [[ -f "$REPO_ROOT/ui/control-center/aether-control-center.desktop" ]]; then
+            mkdir -p "$CHROOT_DIR/usr/share/applications"
+            cp "$REPO_ROOT/ui/control-center/aether-control-center.desktop" "$CHROOT_DIR/usr/share/applications/"
+            log "Control center desktop file installed"
+        fi
+        
         log "UI components copied"
     fi
     
@@ -424,7 +469,9 @@ Session=plasma
 Relogin=false
 
 [Theme]
-Current=breeze
+Current=Aether
+CursorTheme=breeze_cursors
+Font=Inter,10
 
 [General]
 HaltCommand=/usr/bin/systemctl poweroff
@@ -516,7 +563,7 @@ strings:
 images:
     productLogo:         "/usr/share/pixmaps/aetheros-logo.svg"
     productIcon:         "/usr/share/pixmaps/aetheros-logo.svg"
-    productWelcome:      "/usr/share/backgrounds/aetheros/wallpaper-4k.png"
+    productWelcome:      "/usr/share/backgrounds/aetheros/aetheros-default-dark.svg"
 
 slideshow:               "show.qml"
 slideshowAPI: 2
@@ -527,6 +574,12 @@ style:
    sidebarTextSelect:    "#6C8CFF"
    sidebarTextHighlight: "#7AE7C7"
 EOF
+    
+    # Copy slideshow if available
+    if [[ -f "$REPO_ROOT/configs/calamares/show.qml" ]]; then
+        cp "$REPO_ROOT/configs/calamares/show.qml" "$CHROOT_DIR/etc/calamares/branding/aetheros/"
+        log "Calamares slideshow copied"
+    fi
     
     log "Calamares configured"
 }

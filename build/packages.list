@@ -4,8 +4,11 @@
 # =============================================================================
 # Core System
 # =============================================================================
+linux-image-generic
+linux-modules-extra-generic
 linux-generic
 linux-firmware
+initramfs-tools
 ubuntu-minimal
 ubuntu-standard
 

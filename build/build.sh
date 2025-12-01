@@ -173,24 +173,36 @@ copy_kernel() {
     # Find kernel and initrd
     local kernel
     local initrd
-    kernel=$(find "$CHROOT_DIR/boot" -name 'vmlinuz-*' -type f | sort -V | tail -1)
-    initrd=$(find "$CHROOT_DIR/boot" -name 'initrd.img-*' -type f | sort -V | tail -1)
+    
+    log "Searching for kernel in $CHROOT_DIR/boot..."
+    kernel=$(find "$CHROOT_DIR/boot" -name 'vmlinuz-*' -type f 2>/dev/null | sort -V | tail -1)
+    initrd=$(find "$CHROOT_DIR/boot" -name 'initrd.img-*' -type f 2>/dev/null | sort -V | tail -1)
+    
+    # Debug: show boot directory contents
+    if [[ -z "$kernel" ]] || [[ -z "$initrd" ]]; then
+        log "Contents of $CHROOT_DIR/boot:"
+        ls -la "$CHROOT_DIR/boot/" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
     
     if [[ -z "$kernel" ]]; then
-        log_error "Kernel not found in chroot"
+        log_error "Kernel not found in chroot/boot"
+        log_error "Expected: vmlinuz-* files in $CHROOT_DIR/boot"
+        log_error "Please ensure linux-image-generic is installed in the chroot"
         exit 1
     fi
     
     if [[ -z "$initrd" ]]; then
-        log_error "Initrd not found in chroot"
+        log_error "Initrd not found in chroot/boot"
+        log_error "Expected: initrd.img-* files in $CHROOT_DIR/boot"
+        log_error "Please ensure initramfs-tools is installed and update-initramfs was run"
         exit 1
     fi
     
     cp "$kernel" "$ISO_DIR/casper/vmlinuz"
     cp "$initrd" "$ISO_DIR/casper/initrd"
     
-    log "Kernel: $(basename "$kernel")"
-    log "Initrd: $(basename "$initrd")"
+    log "Kernel: $(basename "$kernel") ($(du -h "$kernel" | cut -f1))"
+    log "Initrd: $(basename "$initrd") ($(du -h "$initrd" | cut -f1))"
 }
 
 # =============================================================================
