@@ -407,7 +407,21 @@ copy_configurations() {
             log "Control center desktop file installed"
         fi
         
+        # Copy Aether Updater desktop file
+        if [[ -f "$REPO_ROOT/ui/updater/aether-updater.desktop" ]]; then
+            mkdir -p "$CHROOT_DIR/usr/share/applications"
+            cp "$REPO_ROOT/ui/updater/aether-updater.desktop" "$CHROOT_DIR/usr/share/applications/"
+            log "Aether Updater desktop file installed"
+        fi
+        
         log "UI components copied"
+    fi
+    
+    # Copy additional desktop files (Report Issue, etc.)
+    if [[ -d "$REPO_ROOT/configs/applications" ]]; then
+        mkdir -p "$CHROOT_DIR/usr/share/applications"
+        cp "$REPO_ROOT/configs/applications/"*.desktop "$CHROOT_DIR/usr/share/applications/" 2>/dev/null || true
+        log "Additional desktop files copied"
     fi
     
     log "All configurations copied"

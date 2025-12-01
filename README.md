@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <em>Status: v0.1 Alpha</em>
+  <em>Status: v0.2 Alpha</em>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
-  <img src="https://img.shields.io/badge/version-0.1%20Alpha-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/version-0.2%20Alpha-blue?style=flat-square">
   <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
@@ -203,7 +203,7 @@ This will:
 
 # Roadmap
 
-## v0.1 Alpha (Current) ✅
+## v0.1 Alpha ✅
 * [x] Fix kernel/initrd bundle for ISO build pipeline
 * [x] AetherOS Theme Pack (light/dark, icons, wallpapers)
 * [x] Custom SDDM Login Theme
@@ -214,17 +214,34 @@ This will:
 * [x] Calamares installer branding theme
 * [x] Build system with CI/CD pipeline
 
-## v0.2 (Planned)
+## v0.2 (Current) ✅
+* [x] **Stability & Error Handling**
+  - System health check script (`aether-health.sh`)
+  - Error logging for UI components
+* [x] **Security Hardening**
+  - UFW firewall enabled by default
+  - AppArmor profiles for Firefox
+  - Security update notifications
+* [x] **Window Management**
+  - Windows 11-style tiling (Meta+Arrow)
+  - Workspace shortcuts (Ctrl+Alt+Arrow)
+  - Touchpad gestures for Wayland
+* [x] **Control Center v2**
+  - System Overview, Network, Appearance, Power, Maintenance pages
+* [x] **Update Management**
+  - Aether Updater UI
+  - APT and Flatpak update checking
+* [x] **Backups**
+  - AetherVault home directory backup
+  - Timeshift integration
+* [x] **Performance**
+  - Tiered ZRAM (75%/50%/25% based on RAM)
+  - Power profile switching
+
+## v0.3 (Planned)
 * [ ] Full Calamares slideshow
 * [ ] Additional wallpapers and icon variants
-* [ ] Bug fixes from alpha feedback
 * [ ] Expanded accessibility features
-* [ ] Performance improvements
-
-## v0.3 (Future)
-* [ ] Additional app integrations
-* [ ] More power management options
-* [ ] Custom kernel options
 * [ ] ARM64 support exploration
 
 ---

@@ -1,6 +1,7 @@
 /*
  * AetherOS First Run Wizard
  * Initial setup for new installations
+ * v0.2 - Enhanced with polish and improved UX
  */
 
 import QtQuick 2.15
@@ -10,8 +11,8 @@ import QtQuick.Window 2.15
 
 ApplicationWindow {
     id: root
-    width: 600
-    height: 500
+    width: 650
+    height: 550
     visible: true
     title: "Welcome to AetherOS"
     
@@ -21,6 +22,7 @@ ApplicationWindow {
     readonly property color bgDark: "#0F1720"
     readonly property color surfaceDark: "#101317"
     readonly property color textColor: "#E5E7EB"
+    readonly property color textMuted: "#9CA3AF"
     readonly property int animDuration: 220
     
     color: bgDark
@@ -29,12 +31,16 @@ ApplicationWindow {
     property int currentStep: 0
     property int totalSteps: 4
     
+    // Step names for progress
+    readonly property var stepNames: ["Welcome", "Setup", "Theme", "Privacy"]
+    
     // User preferences
     property string userName: ""
     property string userPassword: ""
     property string selectedTheme: "dark"
     property bool telemetryEnabled: false
     property bool restrictedCodecs: false
+    property bool autoUpdates: true
     
     Rectangle {
         anchors.fill: parent
@@ -43,27 +49,63 @@ ApplicationWindow {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 32
-            spacing: 24
+            spacing: 20
             
-            // Progress indicator
+            // Enhanced progress indicator with step names
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: 0
                 
                 Repeater {
                     model: totalSteps
                     
-                    Rectangle {
+                    RowLayout {
+                        spacing: 0
                         Layout.fillWidth: true
-                        height: 4
-                        radius: 2
-                        color: index <= currentStep ? accentColor : Qt.rgba(1, 1, 1, 0.2)
                         
-                        Behavior on color {
-                            ColorAnimation { duration: animDuration }
+                        // Step circle with number
+                        Rectangle {
+                            width: 32
+                            height: 32
+                            radius: 16
+                            color: index <= currentStep ? accentColor : Qt.rgba(1, 1, 1, 0.1)
+                            border.color: index <= currentStep ? accentColor : Qt.rgba(1, 1, 1, 0.2)
+                            border.width: 2
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: index < currentStep ? "✓" : (index + 1)
+                                font.pixelSize: index < currentStep ? 14 : 12
+                                font.weight: Font.Medium
+                                color: index <= currentStep ? "white" : textMuted
+                            }
+                            
+                            Behavior on color {
+                                ColorAnimation { duration: animDuration }
+                            }
+                        }
+                        
+                        // Connecting line (except after last step)
+                        Rectangle {
+                            visible: index < totalSteps - 1
+                            Layout.fillWidth: true
+                            height: 2
+                            color: index < currentStep ? accentColor : Qt.rgba(1, 1, 1, 0.1)
+                            
+                            Behavior on color {
+                                ColorAnimation { duration: animDuration }
+                            }
                         }
                     }
                 }
+            }
+            
+            // Step name
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: "Step " + (currentStep + 1) + " of " + totalSteps + " — " + stepNames[currentStep]
+                font.pixelSize: 12
+                color: textMuted
             }
             
             // Content area
