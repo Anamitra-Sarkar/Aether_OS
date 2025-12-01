@@ -52,12 +52,14 @@ done
 # Logging Functions
 # =============================================================================
 log() {
-    local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    local message
+    message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
     echo "$message" | tee -a "$LOG_FILE"
 }
 
 log_error() {
-    local message="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    local message
+    message="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
     echo "$message" | tee -a "$LOG_FILE" >&2
 }
 
@@ -144,6 +146,7 @@ create_squashfs() {
     fi
     
     log "Creating squashfs (this may take a while)..."
+    # shellcheck disable=SC2086
     mksquashfs "$CHROOT_DIR" "$ISO_DIR/casper/filesystem.squashfs" \
         $squashfs_opts \
         -e boot \
@@ -156,7 +159,7 @@ create_squashfs() {
         -progress
     
     # Calculate filesystem size
-    printf $(du -sx --block-size=1 "$CHROOT_DIR" | cut -f1) > "$ISO_DIR/casper/filesystem.size"
+    du -sx --block-size=1 "$CHROOT_DIR" | cut -f1 > "$ISO_DIR/casper/filesystem.size"
     
     log "Squashfs created successfully"
 }
@@ -168,8 +171,10 @@ copy_kernel() {
     log_section "Copying Kernel and Initrd"
     
     # Find kernel and initrd
-    local kernel=$(find "$CHROOT_DIR/boot" -name 'vmlinuz-*' -type f | sort -V | tail -1)
-    local initrd=$(find "$CHROOT_DIR/boot" -name 'initrd.img-*' -type f | sort -V | tail -1)
+    local kernel
+    local initrd
+    kernel=$(find "$CHROOT_DIR/boot" -name 'vmlinuz-*' -type f | sort -V | tail -1)
+    initrd=$(find "$CHROOT_DIR/boot" -name 'initrd.img-*' -type f | sort -V | tail -1)
     
     if [[ -z "$kernel" ]]; then
         log_error "Kernel not found in chroot"
@@ -372,7 +377,8 @@ create_efi_image() {
     mkfs.vfat "$efi_img"
     
     # Mount and copy EFI files
-    local efi_mount=$(mktemp -d)
+    local efi_mount
+    efi_mount=$(mktemp -d)
     mount "$efi_img" "$efi_mount"
     mkdir -p "$efi_mount/EFI/BOOT"
     

@@ -177,7 +177,7 @@ show_status() {
     log "=== ZRAM Status ==="
     
     if [[ -e /sys/block/zram0/comp_algorithm ]]; then
-        echo "Algorithm: $(cat /sys/block/zram0/comp_algorithm | grep -o '\[.*\]' | tr -d '[]')"
+        echo "Algorithm: $(grep -o '\[.*\]' /sys/block/zram0/comp_algorithm | tr -d '[]')"
     fi
     
     if [[ -e /sys/block/zram0/disksize ]]; then

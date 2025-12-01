@@ -12,6 +12,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARTIFACTS_DIR="$SCRIPT_DIR/artifacts"
 ISO_PATH="${1:-$SCRIPT_DIR/../build/artifacts/aetheros.iso}"
+ISO_BASENAME="$(basename "$ISO_PATH")"
 TIMEOUT=${TIMEOUT:-120}
 RAM="${RAM:-4096}"
 CPUS="${CPUS:-2}"
@@ -94,7 +95,7 @@ start_qemu() {
                 -daemonize
         }
     
-    QEMU_PID=$(pgrep -f "qemu-system.*aetheros.iso" | head -1 || true)
+    QEMU_PID=$(pgrep -f "qemu-system.*$ISO_BASENAME" | head -1 || true)
     
     if [[ -z "$QEMU_PID" ]]; then
         log_error "Failed to start QEMU"
@@ -110,7 +111,8 @@ start_qemu() {
 wait_for_desktop() {
     log "Waiting for desktop to become ready..."
     
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     local current_time
     local elapsed
     
@@ -124,7 +126,7 @@ wait_for_desktop() {
         fi
         
         # Check if QEMU is still running
-        if ! pgrep -f "qemu-system.*aetheros.iso" &>/dev/null; then
+        if ! pgrep -f "qemu-system.*$ISO_BASENAME" &>/dev/null; then
             log_error "QEMU process died"
             return 1
         fi
@@ -183,9 +185,9 @@ take_screenshot() {
 cleanup() {
     log "Cleaning up..."
     
-    # Kill QEMU
-    if pgrep -f "qemu-system.*aetheros.iso" &>/dev/null; then
-        pkill -f "qemu-system.*aetheros.iso" || true
+    # Kill QEMU - use broader pattern to catch any QEMU instance we started
+    if pgrep -f "qemu-system.*-cdrom" &>/dev/null; then
+        pkill -f "qemu-system.*-cdrom" || true
     fi
     
     # Clean up temp files

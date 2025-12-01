@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC2034
+# Arrays are used via nameref in install functions
+
 # =============================================================================
 # Configuration
 # =============================================================================

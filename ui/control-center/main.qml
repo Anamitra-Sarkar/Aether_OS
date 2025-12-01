@@ -235,8 +235,13 @@ ApplicationWindow {
                 }
                 
                 onClicked: {
-                    // Open system settings
-                    Qt.openUrlExternally("systemsettings5")
+                    // Open system settings using D-Bus or command line
+                    // In KDE, systemsettings5 is launched via command
+                    console.log("Opening System Settings...")
+                    // This requires a Process component or platform-specific launcher
+                    // For now, log the action - real implementation would use:
+                    // Qt.createQmlObject('import QtQuick 2.15; Process { ... }')
+                    // or the org.kde.plasma.components Process type
                 }
             }
         }

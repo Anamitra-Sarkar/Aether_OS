@@ -206,10 +206,26 @@ enable_earlyoom() {
         systemctl start earlyoom || true
         log "EarlyOOM enabled"
     else
-        # Create a simple OOM prevention cron job
+        # Create OOM prevention script
+        cat > /opt/aetheros/oom-check.sh << 'SCRIPT'
+#!/bin/bash
+# AetherOS OOM Prevention Script
+# Clears caches if available memory falls below 256MB
+
+MEM_AVAIL=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+
+if [ "$MEM_AVAIL" -lt 256 ]; then
+    logger -t aetheros-oom "Low memory detected (${MEM_AVAIL}MB), clearing caches"
+    sync
+    echo 1 > /proc/sys/vm/drop_caches
+fi
+SCRIPT
+        chmod +x /opt/aetheros/oom-check.sh
+        
+        # Create cron job
         cat > /etc/cron.d/aetheros-oom-prevention << 'EOF'
-# Check memory every 5 minutes and clear caches if needed
-*/5 * * * * root [ $(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo) -lt 256 ] && sync && echo 1 > /proc/sys/vm/drop_caches
+# AetherOS OOM Prevention - Check memory every 5 minutes
+*/5 * * * * root /opt/aetheros/oom-check.sh
 EOF
         log "Basic OOM prevention configured"
     fi

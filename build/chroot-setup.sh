@@ -22,12 +22,14 @@ LOG_FILE="$SCRIPT_DIR/chroot-setup.log"
 # Logging Functions
 # =============================================================================
 log() {
-    local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    local message
+    message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
     echo "$message" | tee -a "$LOG_FILE"
 }
 
 log_error() {
-    local message="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    local message
+    message="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
     echo "$message" | tee -a "$LOG_FILE" >&2
 }
 
@@ -201,31 +203,19 @@ apt-get install -y --no-install-recommends \
     dolphin \
     kate
 
-# Install additional packages (may have missing ones, continue on error)
-apt-get install -y \
-    network-manager \
-    pipewire \
-    pipewire-pulse \
-    wireplumber \
-    firefox \
-    git \
-    curl \
-    wget \
-    vim \
-    nano \
-    htop \
-    neofetch \
-    bash-completion \
-    fonts-noto \
-    breeze \
-    breeze-gtk-theme \
-    breeze-icon-theme \
-    breeze-cursor-theme \
-    grub-pc-bin \
-    grub-efi-amd64-bin \
-    casper \
-    discover \
-    flatpak || true
+# Install additional packages (some may be unavailable, log failures but continue)
+echo "Installing additional packages..."
+FAILED_PACKAGES=""
+for pkg in network-manager pipewire pipewire-pulse wireplumber firefox git curl wget vim nano htop neofetch bash-completion fonts-noto breeze breeze-gtk-theme breeze-icon-theme breeze-cursor-theme grub-pc-bin grub-efi-amd64-bin casper discover flatpak; do
+    if ! apt-get install -y "\$pkg" 2>/dev/null; then
+        FAILED_PACKAGES="\$FAILED_PACKAGES \$pkg"
+        echo "Warning: Failed to install \$pkg"
+    fi
+done
+
+if [ -n "\$FAILED_PACKAGES" ]; then
+    echo "Note: Some packages could not be installed:\$FAILED_PACKAGES"
+fi
 
 # Clean up
 apt-get autoremove -y
