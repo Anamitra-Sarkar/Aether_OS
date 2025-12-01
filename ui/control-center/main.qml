@@ -115,10 +115,32 @@ ApplicationWindow {
                     Item { Layout.fillHeight: true }
                     
                     // Version info
-                    Text {
-                        text: "AetherOS v0.2"
-                        font.pixelSize: 11
-                        color: textMuted
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 60
+                        radius: 8
+                        color: Qt.rgba(accentColor.r, accentColor.g, accentColor.b, 0.15)
+                        border.color: Qt.rgba(accentColor.r, accentColor.g, accentColor.b, 0.3)
+                        border.width: 1
+                        
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 2
+                            
+                            Text {
+                                text: "AetherOS v1.0 RC"
+                                font.pixelSize: 13
+                                font.weight: Font.Medium
+                                color: textColor
+                            }
+                            
+                            Text {
+                                text: "Release Candidate"
+                                font.pixelSize: 10
+                                color: textMuted
+                            }
+                        }
                     }
                 }
             }
@@ -170,14 +192,20 @@ ApplicationWindow {
                                         color: textMuted
                                     }
                                     Text {
-                                        text: "AetherOS v0.2"
+                                        text: "AetherOS v1.0 RC"
                                         font.pixelSize: 16
                                         font.weight: Font.Medium
                                         color: textColor
                                     }
                                     Text {
+                                        text: "A beautiful, privacy-focused Linux desktop"
+                                        font.pixelSize: 10
+                                        color: accentColor
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    Text {
                                         text: "Based on Ubuntu 24.04 LTS"
-                                        font.pixelSize: 11
+                                        font.pixelSize: 10
                                         color: textMuted
                                     }
                                 }

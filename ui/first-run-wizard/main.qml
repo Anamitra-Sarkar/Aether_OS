@@ -1,7 +1,7 @@
 /*
  * AetherOS First Run Wizard
  * Initial setup for new installations
- * v0.2 - Enhanced with polish and improved UX
+ * v1.0 RC - Final polish and release preparation
  */
 
 import QtQuick 2.15

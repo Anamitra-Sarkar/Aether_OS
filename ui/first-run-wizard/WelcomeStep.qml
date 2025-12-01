@@ -79,7 +79,7 @@ Item {
             Text {
                 id: versionText
                 anchors.centerIn: parent
-                text: "Version 0.2"
+                text: "Version 1.0 RC"
                 font.pixelSize: 12
                 color: accentColor
             }
