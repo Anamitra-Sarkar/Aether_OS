@@ -35,26 +35,42 @@ check_root() {
 }
 
 # =============================================================================
-# Calculate ZRAM Size
+# Calculate ZRAM Size (v0.2 - tiered approach)
 # =============================================================================
 calculate_zram_size() {
     local total_ram_kb
     total_ram_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
     
     local total_ram_mb=$((total_ram_kb / 1024))
-    local zram_size_mb=$((total_ram_mb * ZRAM_SIZE_PERCENT / 100))
+    local zram_size_mb
+    local zram_percent
     
-    # Minimum 256MB, maximum 8GB for zram
-    if [[ $zram_size_mb -lt 256 ]]; then
-        zram_size_mb=256
-    elif [[ $zram_size_mb -gt 8192 ]]; then
-        zram_size_mb=8192
+    # Tiered ZRAM sizing based on RAM amount
+    # <= 4GB: 75% of RAM (maximize swap for low-memory systems)
+    # 4-8GB: 50% of RAM (balanced approach)
+    # > 8GB: 25% of RAM (less needed, avoid wasting compression overhead)
+    
+    if [[ $total_ram_mb -le 4096 ]]; then
+        zram_percent=75
+        log "Low memory system (${total_ram_mb}MB), using 75% for zram"
+    elif [[ $total_ram_mb -le 8192 ]]; then
+        zram_percent=50
+        log "Medium memory system (${total_ram_mb}MB), using 50% for zram"
+    else
+        zram_percent=25
+        log "High memory system (${total_ram_mb}MB), using 25% for zram"
     fi
     
-    # For low-memory systems (<=2GB), use 50%
-    if [[ $total_ram_mb -le 2048 ]]; then
-        zram_size_mb=$((total_ram_mb * 50 / 100))
-        log "Low memory system detected (${total_ram_mb}MB), using 50% for zram"
+    zram_size_mb=$((total_ram_mb * zram_percent / 100))
+    
+    # Enforce minimum and maximum bounds
+    # Minimum 512MB for usability, maximum 16GB to avoid extreme sizes
+    if [[ $zram_size_mb -lt 512 ]]; then
+        zram_size_mb=512
+        log "Applying minimum zram size: 512MB"
+    elif [[ $zram_size_mb -gt 16384 ]]; then
+        zram_size_mb=16384
+        log "Applying maximum zram size: 16GB"
     fi
     
     echo "$zram_size_mb"

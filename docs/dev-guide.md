@@ -386,6 +386,93 @@ sudo aa-status
 sudo aa-status --profiles
 ```
 
+## Performance & Boot Optimization
+
+### ZRAM Configuration
+
+AetherOS uses tiered ZRAM sizing based on available RAM:
+
+| RAM | ZRAM Size |
+|-----|-----------|
+| ≤ 4GB | 75% of RAM |
+| 4-8GB | 50% of RAM |
+| > 8GB | 25% of RAM |
+
+ZRAM uses zstd compression and is set with higher priority (100) than disk swap.
+
+```bash
+# Check ZRAM status
+/opt/aetheros/enable-zram.sh --status
+
+# Re-enable if needed
+sudo /opt/aetheros/enable-zram.sh
+```
+
+### Power Profiles
+
+Control power mode via CLI:
+```bash
+# Check current profile
+aether-power-mode.sh --status
+
+# Set profiles
+aether-power-mode.sh --battery      # Power saver
+aether-power-mode.sh --balanced     # Balanced (default)
+aether-power-mode.sh --performance  # Maximum performance
+```
+
+### Boot Time Analysis
+
+To analyze boot performance:
+```bash
+# Overall boot time
+systemd-analyze
+
+# Per-service breakdown
+systemd-analyze blame | head -20
+
+# Critical path
+systemd-analyze critical-chain
+```
+
+### Boot Optimizations Applied
+
+AetherOS includes these boot optimizations:
+
+1. **Disabled unneeded timers**:
+   - `apt-daily.timer` - daily apt updates disabled
+   - `apt-daily-upgrade.timer` - auto-upgrade disabled
+
+2. **Journal limits**:
+   - Maximum 100MB system journal
+   - Compressed storage
+
+3. **Preload enabled**:
+   - Preloads frequently used applications
+
+4. **I/O scheduler optimized**:
+   - mq-deadline for SSDs
+   - bfq for HDDs
+
+5. **Baloo disabled**:
+   - File indexing disabled by default (user can enable)
+
+### Monitoring Performance
+
+```bash
+# System health check
+/usr/share/aetheros/scripts/aether-health.sh
+
+# Memory usage
+free -h
+
+# Swap usage (including zram)
+swapon --show
+
+# CPU governor
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+```
+
 ## Resources
 
 - [Ubuntu Packaging Guide](https://packaging.ubuntu.com/)
