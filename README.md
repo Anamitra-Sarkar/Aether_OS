@@ -9,45 +9,90 @@
 </p>
 
 <p align="center">
+  <a href="#overview">Overview</a> •
   <a href="#features">Features</a> •
-  <a href="#screenshots">Screenshots</a> •
-  <a href="#installation">Installation</a> •
+  <a href="#design-tokens">Design Tokens</a> •
   <a href="#building">Building</a> •
+  <a href="#testing">Testing</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#default-applications">Default Apps</a> •
+  <a href="#roadmap">Roadmap</a> •
   <a href="#contributing">Contributing</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
+  <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
 </p>
 
 ---
 
 ## Overview
 
-**AetherOS** is a consumer-grade desktop Linux distribution built on Ubuntu 24.04 LTS. It delivers a polished, snappy experience with macOS-like aesthetics and Windows-like familiarity. The goal is to feel more refined than existing alternatives while remaining fully open source and reproducible.
+**AetherOS** is a modern, user-focused Linux desktop built on **Ubuntu 24.04 LTS**.
+It combines:
+
+* macOS-like elegance
+* Windows-style familiarity
+* Linux freedom and performance
+
+The mission is simple:
+
+> **Deliver a polished, consistent, fast, privacy-respecting desktop OS that looks and feels premium — without bloat, telemetry, or proprietary lock-ins.**
+
+---
 
 ## Features
 
-- 🎨 **Beautiful Design** — Refined KDE Plasma desktop with custom Breeze-derived theme, unified iconography, and consistent design tokens
-- ⚡ **Optimized Performance** — zram swap, preload, tuned sysctls, disabled unnecessary services for a snappy experience
-- 🖥️ **Modern Desktop** — KDE Plasma on Wayland (with X11 fallback), Latte Dock, and a polished control center
-- 📦 **Flexible Packaging** — APT for system packages + Flatpak (Flathub) for optional apps
-- 🔧 **First-Run Wizard** — Friendly setup experience with privacy-first defaults
-- ♿ **Accessible** — High-DPI support, keyboard navigation, reduced-motion toggle, screen reader support
-- 🔒 **Privacy-Focused** — Telemetry disabled by default, no proprietary components required
+* 🎨 **Beautiful Design**
+  Custom KDE Plasma theme, refined visuals, translucent shell panels, unified iconography, and handcrafted design tokens.
+
+* ⚡ **Optimized Performance**
+  zram swap, preload, tuned sysctls, disabled unnecessary services, trimmed indexing, and smart defaults for snappy responsiveness.
+
+* 🖥️ **Modern Desktop**
+  KDE Plasma on Wayland (with seamless X11 fallback), Latte Dock, and a polished layout inspired by macOS and Windows.
+
+* 🔧 **First-Run Wizard**
+  Friendly onboarding with privacy-first defaults, theme selection, app bundles, Flatpak setup, and optional codecs.
+
+* ♿ **Accessible**
+  High-DPI, reduced motion mode, UI scaling presets, screen reader support, and shortcut-oriented navigation.
+
+* 🔒 **Privacy-Focused**
+  Telemetry disabled by default, no mandatory proprietary binaries, and deliberate transparency in system behavior.
+
+---
 
 ## Design Tokens
 
-| Token | Light | Dark |
-|-------|-------|------|
-| Primary Accent | `#6C8CFF` (Aether Blue) | `#6C8CFF` |
-| Secondary Accent | `#7AE7C7` (Soft Mint) | `#7AE7C7` |
-| Background | `#F6F8FA` | `#0F1720` |
-| Surface | `#FFFFFF` | `#101317` |
+| Token            | Light                   | Dark      |
+| ---------------- | ----------------------- | --------- |
+| Primary Accent   | `#6C8CFF` (Aether Blue) | `#6C8CFF` |
+| Secondary Accent | `#7AE7C7` (Soft Mint)   | `#7AE7C7` |
+| Background       | `#F6F8FA`               | `#0F1720` |
+| Surface          | `#FFFFFF`               | `#101317` |
 
-- **Typography**: Inter (system default), fallback Noto Sans
-- **UI Radius**: 10–12px rounded corners
-- **Animation**: 150ms base, 220ms modal, cubic-bezier(0.22, 1, 0.36, 1)
+* **Font**: Inter (system) — fallback Noto Sans
+* **Corner Radius**: 10–12px
+* **Motion Curve**: `cubic-bezier(0.22, 1, 0.36, 1)`
+* **Animation Durations**:
+
+  * Base: 150ms
+  * Modal: 220ms
+
+---
+
+## Screenshots
+
+*Initial UI previews will be added after the first successful ISO boot.*
+(QEMU desktop screenshots automatically saved to `tests/artifacts/`)
+
+---
 
 ## Prerequisites
 
-To build AetherOS, you need an Ubuntu 24.04 host with the following packages:
+Run the build on an **Ubuntu 24.04 host**:
 
 ```bash
 sudo apt update
@@ -66,86 +111,132 @@ sudo apt install -y \
     syslinux-common
 ```
 
-## Building
+---
 
-### Quick Build
+# Building
+
+## Quick Build
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/aetheros.git
-cd aetheros
+git clone https://github.com/Anamitra-Sarkar/Aether_OS.git
+cd Aether_OS
 
-# Build the ISO (requires sudo)
+# Build the ISO
 sudo ./build/build.sh
 
 # Output: build/artifacts/aetheros.iso
 ```
 
-### Minimal Build (for testing)
+## Minimal Build (faster test ISO)
 
 ```bash
 sudo ./build/build.sh --minimal
 ```
 
-### Build Artifacts
+## Build Artifacts
 
-After a successful build, you'll find:
-- `build/artifacts/aetheros.iso` — Bootable ISO image
-- `build/artifacts/aetheros.iso.sha256` — SHA256 checksum
+After success:
 
-## Testing
+* `build/artifacts/aetheros.iso`
+* `build/artifacts/aetheros.iso.sha256`
 
-### QEMU Boot Test
+---
+
+# Testing
+
+## QEMU Boot Test
 
 ```bash
 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
 ```
 
 This will:
-1. Boot the ISO in QEMU with 4GB RAM
-2. Wait for desktop to become ready
-3. Save a screenshot to `tests/artifacts/desktop.png`
-4. Exit with code 0 on success
 
-### UI Sanity Checks
+1. Boot the ISO with 4GB RAM
+2. Verify desktop session
+3. Save screenshot to:
+   `tests/artifacts/desktop.png`
+4. Exit 0 on success
+
+## UI Sanity Check
 
 ```bash
 ./tests/ui-sanity.sh
 ```
 
-## Installation
+---
 
-1. Download the latest ISO from [Releases](https://github.com/your-org/aetheros/releases)
-2. Create a bootable USB using Balena Etcher, Ventoy, or `dd`
-3. Boot from USB and follow the Calamares installer
+# Installation
 
-## Default Applications
+1. Download the latest ISO from:
+   **[https://github.com/Anamitra-Sarkar/Aether_OS/releases](https://github.com/Anamitra-Sarkar/Aether_OS/releases)**
+2. Flash ISO to USB via:
 
-| Category | Application |
-|----------|-------------|
-| Browser | Firefox |
-| Office | LibreOffice |
-| Video Player | VLC |
-| Image Editor | GIMP |
-| Video Editor | Kdenlive |
-| Email | Thunderbird |
-| Software Center | Discover + Flatpak |
-| System Backup | Timeshift |
-
-## Contributing
-
-We welcome contributions! Please read our [Developer Guide](docs/dev-guide.md) and [Theming Guide](docs/theming-guide.md).
-
-## License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Ubuntu and Canonical for the excellent LTS base
-- KDE Team for Plasma and KWin
-- The open source community for countless contributions
+   * Balena Etcher
+   * Ventoy
+   * `dd`
+3. Boot and follow the Calamares installer
 
 ---
 
-<p align="center">Made with ❤️ by the AetherOS Team</p>
+# Default Applications
+
+| Category        | Application        |
+| --------------- | ------------------ |
+| Browser         | Firefox            |
+| Office          | LibreOffice        |
+| Media Player    | VLC                |
+| Image Editor    | GIMP               |
+| Video Editor    | Kdenlive           |
+| Email           | Thunderbird        |
+| Software Center | Discover + Flatpak |
+| Backup          | Timeshift          |
+
+---
+
+# Roadmap
+
+* [ ] Fix kernel/initrd bundle for ISO build pipeline
+* [ ] AetherOS Theme Pack (light/dark, icons, wallpapers)
+* [ ] Custom SDDM Login Theme
+* [ ] Aether Control Center (Quick Settings, Power, Night Light)
+* [ ] First-Run Wizard (theme, privacy, app bundles)
+* [ ] App Bundles (Core, Dev, Media, Gaming)
+* [ ] Performance presets and telemetry-free diagnostics
+* [ ] Calamares installer branding theme
+* [ ] First public alpha ISO release with screenshots & guide
+
+---
+
+# Contributing
+
+Contributions are welcome!
+
+Please read:
+
+* [`docs/dev-guide.md`](docs/dev-guide.md)
+* [`docs/theming-guide.md`](docs/theming-guide.md)
+
+Suggestions, patches, branding ideas, performance improvements — all appreciated.
+
+---
+
+# License
+
+This project is licensed under the **Apache License 2.0**.
+See the file: [`LICENSE`](LICENSE)
+
+---
+
+## Acknowledgments
+
+* Ubuntu / Canonical
+* KDE Community
+* Linux open-source ecosystem
+
+---
+
+<p align="center">
+  Made with ❤️ for everyone who wants a clean, modern, beautiful Linux desktop.
+</p>
