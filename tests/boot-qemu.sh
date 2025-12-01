@@ -170,8 +170,8 @@ take_screenshot() {
         return 0
     else
         log "Could not capture screenshot via QEMU monitor"
-        # Create a placeholder
-        echo "Screenshot not available - QEMU monitor screendump failed" > "${output_file}.txt"
+        # Note: Screenshot capture requires QEMU monitor support
+        # CI will handle missing screenshots gracefully
         return 1
     fi
 }

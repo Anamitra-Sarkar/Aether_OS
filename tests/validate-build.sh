@@ -195,7 +195,7 @@ validate_scripts() {
         else
             log_fail "Script not executable: ${script#$REPO_ROOT/}"
         fi
-    done < <(find "$REPO_ROOT" -name "*.sh" -type f -print0 | grep -zv node_modules)
+    done < <(find "$REPO_ROOT" -name "*.sh" -type f ! -path "*/node_modules/*" ! -path "*/.git/*" -print0)
 }
 
 validate_ci_config() {

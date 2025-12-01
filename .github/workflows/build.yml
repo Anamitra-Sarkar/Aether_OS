@@ -192,18 +192,18 @@ jobs:
     
     - name: Check for unsafe patterns
       run: |
-        echo "Checking for unsafe shell patterns..."
+        echo "Checking for unsafe shell patterns with shellcheck..."
         
-        # Check for unquoted variables
-        if grep -rn '\$[A-Z_][A-Z_0-9]*[^"]' --include="*.sh" . 2>/dev/null | grep -v "shellcheck disable"; then
-          echo "Warning: Found potentially unquoted variables"
-        fi
+        # Use shellcheck for comprehensive validation (already run in lint step)
+        # This step is now handled by the dedicated lint job with shellcheck
         
         # Check for missing error handling
-        SCRIPTS_WITHOUT_SET_E=$(grep -L "set -e" $(find . -name "*.sh" -type f) 2>/dev/null || true)
+        SCRIPTS_WITHOUT_SET_E=$(grep -L "set -e\|set -euo" $(find . -name "*.sh" -type f ! -path "*/.git/*" ! -path "*/node_modules/*") 2>/dev/null || true)
         if [ -n "$SCRIPTS_WITHOUT_SET_E" ]; then
-          echo "Warning: Scripts without 'set -e':"
+          echo "Warning: Scripts without strict error handling:"
           echo "$SCRIPTS_WITHOUT_SET_E"
+        else
+          echo "All scripts have proper error handling"
         fi
   
   codeql:
