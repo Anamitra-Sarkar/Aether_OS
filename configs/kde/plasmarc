@@ -1,0 +1,22 @@
+# AetherOS Plasma Configuration
+
+[Theme]
+name=aetheros
+
+[General]
+
+[KDE]
+AnimationDurationFactor=0.5
+LookAndFeelPackage=org.kde.breezedark.desktop
+SingleClick=true
+ScrollbarLeftClickNavigatesByPage=false
+widgetStyle=kvantum-dark
+
+[KDE Action Restrictions][$i]
+action/start_new_session=false
+
+[Plasmarc]
+Theme=default
+
+[PlasmaViews][Panel 2]
+floating=1

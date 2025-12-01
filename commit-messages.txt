@@ -1,0 +1,53 @@
+# AetherOS Commit Message Templates
+# Use these as guidelines for consistent commit messages
+
+# Stage 1 - Repository Setup
+chore: add repo skeleton and licensing
+chore: add README with project overview and prerequisites
+
+# Stage 2 - Build Scripts
+feat(build): add chroot setup script with debootstrap
+feat(build): add packages.list for system packages
+feat(build): add build script to assemble live ISO
+
+# Stage 3 - Configuration
+feat(config): add KDE Plasma config snippets
+feat(config): add Latte Dock layout with pinned apps
+feat(config): add SDDM theme and autologin config
+feat(config): add Calamares installer configuration
+feat(config): add GTK-4 CSS for theme consistency
+
+# Stage 4 - Optimization Scripts
+feat(opt): add zram enable script for swap optimization
+feat(opt): add system tuning script for performance
+feat(opt): add service trimmer for minimal footprint
+
+# Stage 5 - User Interface
+feat(ui): add QML control center with quick settings
+feat(ui): add first-run wizard for initial setup
+
+# Stage 6 - Scripts
+feat(scripts): add live user creation script
+feat(scripts): add bundle installer script
+feat(scripts): add first-run configuration script
+
+# Stage 7 - Tests
+test: add QEMU boot test for ISO validation
+test: add UI sanity checks
+
+# Stage 8 - Documentation
+docs: add design tokens documentation
+docs: add developer guide
+docs: add theming guide
+
+# Stage 9 - Artwork
+art: add placeholder logo and icons
+art: add default wallpaper
+
+# Stage 10 - CI/CD
+ci: add GitHub Actions workflow for ISO build
+
+# Maintenance
+fix: description of the fix
+refactor: description of refactoring
+perf: description of performance improvement

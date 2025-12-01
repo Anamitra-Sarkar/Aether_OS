@@ -1,0 +1,156 @@
+# AetherOS Package List
+# Format: one package per line, comments start with #
+
+# =============================================================================
+# Core System
+# =============================================================================
+linux-generic
+linux-firmware
+ubuntu-minimal
+ubuntu-standard
+
+# =============================================================================
+# KDE Plasma Desktop
+# =============================================================================
+plasma-desktop
+kde-standard
+sddm
+sddm-theme-breeze
+kwin-x11
+kwin-wayland
+plasma-workspace-wayland
+xdg-desktop-portal-kde
+
+# =============================================================================
+# Latte Dock
+# =============================================================================
+latte-dock
+
+# =============================================================================
+# Theming
+# =============================================================================
+kvantum
+qt5-style-kvantum
+breeze
+breeze-gtk-theme
+breeze-icon-theme
+breeze-cursor-theme
+papirus-icon-theme
+fonts-inter
+fonts-noto
+fonts-noto-color-emoji
+
+# =============================================================================
+# Audio (PipeWire)
+# =============================================================================
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+libspa-0.2-bluetooth
+pavucontrol-qt
+
+# =============================================================================
+# Networking
+# =============================================================================
+network-manager
+network-manager-gnome
+plasma-nm
+wpasupplicant
+bluez
+bluedevil
+
+# =============================================================================
+# System Utilities
+# =============================================================================
+timeshift
+preload
+tlp
+power-profiles-daemon
+systemd-zram-generator
+fwupd
+upower
+udisks2
+gvfs
+
+# =============================================================================
+# Installer
+# =============================================================================
+calamares
+calamares-settings-ubuntu
+
+# =============================================================================
+# Software Management
+# =============================================================================
+discover
+flatpak
+plasma-discover-backend-flatpak
+
+# =============================================================================
+# Default Applications
+# =============================================================================
+firefox
+libreoffice
+vlc
+gimp
+kdenlive
+thunderbird
+kate
+dolphin
+konsole
+ark
+gwenview
+okular
+spectacle
+kcalc
+kwrite
+
+# =============================================================================
+# Multimedia Codecs (non-restricted)
+# =============================================================================
+ffmpeg
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+
+# =============================================================================
+# Accessibility
+# =============================================================================
+orca
+at-spi2-core
+speech-dispatcher
+
+# =============================================================================
+# Development Tools (minimal)
+# =============================================================================
+git
+curl
+wget
+vim
+nano
+
+# =============================================================================
+# Hardware Support
+# =============================================================================
+mesa-utils
+vainfo
+intel-media-va-driver
+xserver-xorg-video-all
+
+# =============================================================================
+# Boot and Live Session
+# =============================================================================
+grub-pc
+grub-efi-amd64-signed
+shim-signed
+casper
+lupin-casper
+discover-snap
+
+# =============================================================================
+# Misc Utilities
+# =============================================================================
+openssh-server
+htop
+neofetch
+bash-completion
+file-roller
