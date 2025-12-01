@@ -38,8 +38,8 @@ ApplicationWindow {
     property int currentPage: 0
     
     // Page titles
-    readonly property var pageTitles: ["Overview", "Network & Security", "Appearance", "Power & Performance", "Maintenance"]
-    readonly property var pageIcons: ["🖥️", "🔒", "🎨", "⚡", "🔧"]
+    readonly property var pageTitles: ["Overview", "Network & Security", "Appearance", "Power & Performance", "Maintenance", "About"]
+    readonly property var pageIcons: ["🖥️", "🔒", "🎨", "⚡", "🔧", "ℹ️"]
     
     Rectangle {
         anchors.fill: parent
@@ -860,6 +860,176 @@ ApplicationWindow {
                                     onClicked: console.log("Open ~/.local/share/aetheros/logs")
                                 }
                             }
+                        }
+                        
+                        Item { Layout.fillHeight: true }
+                    }
+                    
+                    // Page 5: About AetherOS
+                    ColumnLayout {
+                        spacing: 20
+                        
+                        // Header
+                        ColumnLayout {
+                            spacing: 8
+                            Layout.alignment: Qt.AlignHCenter
+                            
+                            Text {
+                                text: "About AetherOS"
+                                font.pixelSize: 24
+                                font.weight: Font.Bold
+                                color: textColor
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                            
+                            Text {
+                                text: "A beautiful, privacy-focused Linux desktop"
+                                font.pixelSize: 13
+                                color: textMuted
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                        }
+                        
+                        // Version information
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 140
+                            Layout.topMargin: 8
+                            radius: 12
+                            color: surfaceDark
+                            
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 20
+                                spacing: 12
+                                
+                                RowLayout {
+                                    spacing: 12
+                                    Text {
+                                        text: "Version"
+                                        font.pixelSize: 13
+                                        color: textMuted
+                                        Layout.preferredWidth: 100
+                                    }
+                                    Text {
+                                        text: "v1.0 RC (Release Candidate)"
+                                        font.pixelSize: 13
+                                        font.weight: Font.Medium
+                                        color: textColor
+                                    }
+                                }
+                                
+                                RowLayout {
+                                    spacing: 12
+                                    Text {
+                                        text: "Base"
+                                        font.pixelSize: 13
+                                        color: textMuted
+                                        Layout.preferredWidth: 100
+                                    }
+                                    Text {
+                                        text: "Ubuntu 24.04 LTS (Noble Numbat)"
+                                        font.pixelSize: 13
+                                        color: textColor
+                                    }
+                                }
+                                
+                                RowLayout {
+                                    spacing: 12
+                                    Text {
+                                        text: "Desktop"
+                                        font.pixelSize: 13
+                                        color: textMuted
+                                        Layout.preferredWidth: 100
+                                    }
+                                    Text {
+                                        text: "KDE Plasma 5.27+"
+                                        font.pixelSize: 13
+                                        color: textColor
+                                    }
+                                }
+                                
+                                RowLayout {
+                                    spacing: 12
+                                    Text {
+                                        text: "Kernel"
+                                        font.pixelSize: 13
+                                        color: textMuted
+                                        Layout.preferredWidth: 100
+                                    }
+                                    Text {
+                                        text: "Linux 6.8+ (Ubuntu kernel)"
+                                        font.pixelSize: 13
+                                        color: textColor
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Features
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 120
+                            radius: 12
+                            color: surfaceDark
+                            
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 20
+                                spacing: 8
+                                
+                                Text {
+                                    text: "Key Features"
+                                    font.pixelSize: 14
+                                    font.weight: Font.Medium
+                                    color: textColor
+                                }
+                                
+                                Text {
+                                    text: "• Privacy-focused with telemetry disabled by default\n• Optimized performance with ZRAM and system tuning\n• Beautiful custom KDE Plasma theme\n• First-run wizard for easy setup"
+                                    font.pixelSize: 12
+                                    color: textMuted
+                                    lineHeight: 1.5
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+                        
+                        // GitHub button
+                        Button {
+                            text: "View Project on GitHub"
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: 8
+                            onClicked: {
+                                Qt.openUrlExternally("https://github.com/Anamitra-Sarkar/Aether_OS")
+                            }
+                            background: Rectangle {
+                                radius: 8
+                                color: accentColor
+                            }
+                            contentItem: RowLayout {
+                                spacing: 8
+                                Text {
+                                    text: "🔗"
+                                    font.pixelSize: 14
+                                }
+                                Text {
+                                    text: parent.parent.text
+                                    color: "white"
+                                    font.pixelSize: 13
+                                    font.weight: Font.Medium
+                                }
+                            }
+                        }
+                        
+                        // License
+                        Text {
+                            text: "Licensed under Apache License 2.0"
+                            font.pixelSize: 11
+                            color: textMuted
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: 8
                         }
                         
                         Item { Layout.fillHeight: true }
