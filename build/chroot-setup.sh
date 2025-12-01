@@ -201,8 +201,9 @@ apt-get install -y --no-install-recommends \
 # Generate initramfs for all installed kernels
 echo "Generating initramfs for installed kernels..."
 if [ -d /lib/modules ]; then
-    for KERNEL_VERSION in \$(ls /lib/modules/ | sort -V); do
-        if [ -d "/lib/modules/\$KERNEL_VERSION" ]; then
+    for KERNEL_DIR in /lib/modules/*/; do
+        if [ -d "\$KERNEL_DIR" ]; then
+            KERNEL_VERSION=\$(basename "\$KERNEL_DIR")
             echo "Generating initramfs for kernel \$KERNEL_VERSION..."
             update-initramfs -c -k "\$KERNEL_VERSION" || true
         fi

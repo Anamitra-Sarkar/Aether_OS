@@ -248,10 +248,10 @@ Presentation {
     }
 
     function goToNextSlide() {
-        if (currentSlide < count - 1) {
-            currentSlide++
+        if (presentation.currentSlide < presentation.count - 1) {
+            presentation.currentSlide++
         } else {
-            currentSlide = 0
+            presentation.currentSlide = 0
         }
     }
 }
