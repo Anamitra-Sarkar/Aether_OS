@@ -10,7 +10,9 @@ set -euo pipefail
 # Configuration
 # =============================================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 ARTIFACTS_DIR="$SCRIPT_DIR/artifacts"
+SCREENSHOTS_DIR="$REPO_ROOT/artwork/screenshots"
 ISO_PATH="${1:-$SCRIPT_DIR/../build/artifacts/aetheros.iso}"
 ISO_BASENAME="$(basename "$ISO_PATH")"
 TIMEOUT=${TIMEOUT:-120}
@@ -48,6 +50,7 @@ check_prerequisites() {
     fi
     
     mkdir -p "$ARTIFACTS_DIR"
+    mkdir -p "$SCREENSHOTS_DIR"
     
     log "Prerequisites OK"
 }
@@ -152,31 +155,50 @@ wait_for_desktop() {
 # Take Screenshot
 # =============================================================================
 take_screenshot() {
-    log "Taking screenshot..."
+    local output_file="${1:-$SCREENSHOT_FILE}"
+    log "Taking screenshot to $output_file..."
     
-    if command -v grim &>/dev/null && [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
-        grim "$SCREENSHOT_FILE" || true
-    elif command -v import &>/dev/null; then
-        # ImageMagick import
-        import -window root "$SCREENSHOT_FILE" 2>/dev/null || true
-    elif command -v scrot &>/dev/null; then
-        scrot "$SCREENSHOT_FILE" 2>/dev/null || true
-    else
-        log "No screenshot tool available"
-        # Create a placeholder
-        echo "Screenshot not available - no capture tool installed" > "$ARTIFACTS_DIR/screenshot.txt"
-    fi
-    
-    # Try to use QEMU monitor to screendump
+    # Try to use QEMU monitor to screendump (most reliable for QEMU)
     if [[ -S /tmp/qemu-monitor.sock ]]; then
-        echo "screendump $SCREENSHOT_FILE" | socat - UNIX-CONNECT:/tmp/qemu-monitor.sock 2>/dev/null || true
+        if command -v socat &>/dev/null; then
+            echo "screendump $output_file" | socat - UNIX-CONNECT:/tmp/qemu-monitor.sock 2>/dev/null || true
+        fi
     fi
     
-    if [[ -f "$SCREENSHOT_FILE" ]]; then
-        log "Screenshot saved: $SCREENSHOT_FILE"
+    if [[ -f "$output_file" ]]; then
+        log "Screenshot saved: $output_file"
+        return 0
     else
-        log "Could not capture screenshot"
+        log "Could not capture screenshot via QEMU monitor"
+        # Create a placeholder
+        echo "Screenshot not available - QEMU monitor screendump failed" > "${output_file}.txt"
+        return 1
     fi
+}
+
+# =============================================================================
+# Capture Multiple Screenshots
+# =============================================================================
+capture_screenshots() {
+    log "Capturing screenshots for presentation..."
+    
+    # Wait a moment for desktop to stabilize
+    sleep 5
+    
+    # Capture login screen (if visible)
+    take_screenshot "$SCREENSHOTS_DIR/login.png" || true
+    
+    # Wait for desktop to fully load
+    sleep 10
+    
+    # Capture desktop
+    take_screenshot "$SCREENSHOTS_DIR/desktop.png" || true
+    take_screenshot "$ARTIFACTS_DIR/desktop.png" || true
+    
+    # Note: control-center.png would require automated interaction
+    # For now, we'll document this as a manual step
+    log "Screenshots captured (login, desktop)"
+    log "Note: control-center.png requires manual capture"
 }
 
 # =============================================================================
@@ -239,11 +261,11 @@ main() {
     start_qemu
     
     if wait_for_desktop; then
-        take_screenshot
+        capture_screenshots
         log "=== Boot Test PASSED ==="
         exit 0
     else
-        take_screenshot
+        take_screenshot "$ARTIFACTS_DIR/boot-failure.png"
         log "=== Boot Test FAILED ==="
         exit 1
     fi

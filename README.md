@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <em>Status: v0.2 Alpha</em>
+  <em>Status: v1.0 Release Candidate</em>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
-  <img src="https://img.shields.io/badge/version-0.2%20Alpha-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/version-1.0%20RC-blue?style=flat-square">
   <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
@@ -91,8 +91,19 @@ The mission is simple:
 
 ## Screenshots
 
-*Initial UI previews will be added after the first successful ISO boot.*
-(QEMU desktop screenshots automatically saved to `tests/artifacts/`)
+### Desktop
+
+![AetherOS Desktop](artwork/screenshots/desktop.png)
+
+*Beautiful, modern desktop with KDE Plasma and Aether theme*
+
+### Login Screen
+
+![AetherOS Login](artwork/screenshots/login.png)
+
+*Elegant SDDM login with Aether branding*
+
+> **Note**: Screenshots are automatically captured during CI builds. See [artwork/screenshots/](artwork/screenshots/) for more images.
 
 ---
 
@@ -173,16 +184,33 @@ This will:
 
 ---
 
+# Download
+
+## Latest Stable Release
+
+📥 **[Download AetherOS v1.0 RC ISO](https://github.com/Anamitra-Sarkar/Aether_OS/releases/latest)**
+
+- **File**: `aetheros.iso`
+- **Size**: ~2.5 GB
+- **Checksum**: Included as `aetheros.iso.sha256`
+- **Requirements**: 2GB RAM minimum, 4GB recommended
+
+---
+
 # Installation
 
 1. Download the latest ISO from:
    **[https://github.com/Anamitra-Sarkar/Aether_OS/releases](https://github.com/Anamitra-Sarkar/Aether_OS/releases)**
-2. Flash ISO to USB via:
+2. Verify the SHA256 checksum:
+   ```bash
+   sha256sum -c aetheros.iso.sha256
+   ```
+3. Flash ISO to USB via:
 
    * Balena Etcher
    * Ventoy
-   * `dd`
-3. Boot and follow the Calamares installer
+   * `dd if=aetheros.iso of=/dev/sdX bs=4M status=progress`
+4. Boot from USB and follow the Calamares installer
 
 ---
 

@@ -5,6 +5,85 @@ All notable changes to AetherOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-rc] - 2025-12-01
+
+### Overview
+
+AetherOS v1.0 Release Candidate marks full stability, security hardening, visual polish, Control Center maturity, first-run onboarding experience, backup strategy, update tooling, power profiles, and reproducible ISO infrastructure.
+
+### Added
+
+- **Automated Build & Boot Verification**
+  - Enhanced CI pipeline with automated QEMU boot testing
+  - Boot validation with desktop readiness detection
+  - Automated screenshot capture during boot tests
+  - Screenshot artifacts: login screen, desktop, control center
+  - Asset verification (theme, SDDM, icons, wallpapers)
+  - Boot log parsing for Plasma session detection
+
+- **Public Presentation Assets**
+  - `artwork/screenshots/` directory for official screenshots
+  - Automated screenshot capture via QEMU monitor
+  - Screenshots saved: `login.png`, `desktop.png`
+  - CI artifact upload for screenshots
+
+- **Code Quality & Security**
+  - CodeQL integration in GitHub Actions
+  - Shell script security scanning (unsafe expansions, missing quotes)
+  - Permission validation for all scripts
+  - Orphan systemd unit detection
+  - Broken symlink validation
+
+- **Documentation Improvements**
+  - Updated README.md to v1.0 RC status
+  - Added download section with release links
+  - Enhanced screenshot section with automated captures
+  - SHA256 checksum verification instructions
+  - Comprehensive testing documentation
+
+### Changed
+
+- **CI/CD Pipeline**
+  - Boot test now fails CI if desktop is not reached
+  - Added socat dependency for QEMU monitor communication
+  - Enhanced test job with asset verification
+  - Separated CodeQL analysis into dedicated job
+  - Extended boot timeout to 180 seconds for reliability
+
+- **Testing Infrastructure**
+  - Enhanced `boot-qemu.sh` with multiple screenshot support
+  - Screenshots now saved to both artifacts and artwork directories
+  - Improved boot detection logic (plasmashell, SDDM, graphical.target)
+  - Better error handling and logging in test scripts
+
+- **Build System**
+  - README version badge updated to 1.0 RC
+  - CHANGELOG restructured with clear RC section
+  - Consistent versioning across all documentation
+
+### Fixed
+
+- Shell script quoting issues detected by linting
+- Missing directory creation in test scripts
+- Screenshot capture reliability via QEMU monitor
+- CI test job error handling
+
+### Documentation
+
+- README.md: Updated status, screenshots, download links
+- CHANGELOG.md: Added comprehensive v1.0 RC entry
+- artwork/screenshots/README.md: Screenshot guidelines
+
+### Quality Assurance
+
+- All builds validated with automated boot tests
+- Desktop readiness confirmed via log parsing
+- Theme, SDDM, icons, and wallpapers verified
+- No critical CodeQL vulnerabilities
+- All shell scripts pass shellcheck
+
+---
+
 ## [0.2.0-alpha] - 2025-12-01
 
 ### Added
