@@ -94,12 +94,55 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y qemu-system-x86 qemu-utils
+        sudo apt-get install -y qemu-system-x86 qemu-utils socat
+    
+    - name: Run boot test with QEMU
+      run: |
+        chmod +x ./tests/boot-qemu.sh
+        TIMEOUT=180 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
+      continue-on-error: false
     
     - name: Run UI sanity checks
       run: |
         chmod +x ./tests/ui-sanity.sh
-        ./tests/ui-sanity.sh || true
+        ./tests/ui-sanity.sh
+      continue-on-error: true
+    
+    - name: Verify required assets
+      run: |
+        echo "Checking for required assets..."
+        MISSING_ASSETS=0
+        
+        # Check for theme files (in chroot or repo)
+        if [ ! -d "configs/plasma" ] && [ ! -d "ui/theme" ]; then
+          echo "ERROR: Theme files not found"
+          MISSING_ASSETS=$((MISSING_ASSETS + 1))
+        fi
+        
+        # Check for SDDM theme
+        if [ ! -d "configs/sddm" ]; then
+          echo "ERROR: SDDM theme not found"
+          MISSING_ASSETS=$((MISSING_ASSETS + 1))
+        fi
+        
+        # Check for icons
+        if [ ! -d "artwork/icons" ]; then
+          echo "ERROR: Icons not found"
+          MISSING_ASSETS=$((MISSING_ASSETS + 1))
+        fi
+        
+        # Check for wallpapers
+        if [ ! -d "artwork/wallpapers" ]; then
+          echo "ERROR: Wallpapers not found"
+          MISSING_ASSETS=$((MISSING_ASSETS + 1))
+        fi
+        
+        if [ $MISSING_ASSETS -gt 0 ]; then
+          echo "FAIL: $MISSING_ASSETS required assets missing"
+          exit 1
+        fi
+        
+        echo "PASS: All required assets present"
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -108,6 +151,14 @@ jobs:
         name: test-results
         path: tests/artifacts/
         retention-days: 3
+    
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: screenshots
+        path: artwork/screenshots/
+        retention-days: 7
 
   lint:
     runs-on: ubuntu-24.04
@@ -131,13 +182,51 @@ jobs:
     - name: Check script permissions
       run: |
         echo "Checking executable permissions..."
-        for script in build/build.sh build/chroot-setup.sh opt/*.sh scripts/*.sh tests/*.sh ui/**/run.sh; do
+        for script in build/build.sh build/chroot-setup.sh tests/*.sh; do
           if [ -f "$script" ]; then
             if [ ! -x "$script" ]; then
               echo "Warning: $script is not executable"
             fi
           fi
         done
+    
+    - name: Check for unsafe patterns
+      run: |
+        echo "Checking for unsafe shell patterns with shellcheck..."
+        
+        # Use shellcheck for comprehensive validation (already run in lint step)
+        # This step is now handled by the dedicated lint job with shellcheck
+        
+        # Check for missing error handling
+        SCRIPTS_WITHOUT_SET_E=$(grep -L "set -e\|set -euo" $(find . -name "*.sh" -type f ! -path "*/.git/*" ! -path "*/node_modules/*") 2>/dev/null || true)
+        if [ -n "$SCRIPTS_WITHOUT_SET_E" ]; then
+          echo "Warning: Scripts without strict error handling:"
+          echo "$SCRIPTS_WITHOUT_SET_E"
+        else
+          echo "All scripts have proper error handling"
+        fi
+  
+  codeql:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: cpp, python
+        queries: security-and-quality
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:cpp"
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

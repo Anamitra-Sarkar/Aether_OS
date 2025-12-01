@@ -473,12 +473,53 @@ swapon --show
 cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 ```
 
+## Backup & Recovery
+
+AetherOS provides comprehensive backup solutions for both system and user data.
+
+### Quick Reference
+
+For detailed backup instructions, see **[Backup Guide](backup-guide.md)**.
+
+**System Backup (Timeshift)**:
+```bash
+# Create system snapshot
+sudo timeshift --create --comments "Before update"
+
+# List snapshots
+sudo timeshift --list
+
+# Restore from snapshot
+sudo timeshift --restore
+```
+
+**User Data Backup (AetherVault)**:
+```bash
+# Backup home directory
+/usr/share/aetheros/scripts/aethervault.sh /path/to/backup
+
+# Dry run (preview what will be backed up)
+/usr/share/aetheros/scripts/aethervault.sh /path/to/backup --dry-run
+
+# Restore
+rsync -av --progress /path/to/backup/ ~/
+```
+
+**Best Practice**: Create a Timeshift snapshot before:
+- System updates
+- Installing new software
+- Modifying system configurations
+- Testing new features
+
 ## Resources
 
 - [Ubuntu Packaging Guide](https://packaging.ubuntu.com/)
 - [KDE Plasma Development](https://develop.kde.org/docs/plasma/)
 - [Calamares Documentation](https://calamares.io/docs/)
 - [GRUB Manual](https://www.gnu.org/software/grub/manual/)
+- [AetherOS Backup Guide](backup-guide.md)
+- [AetherOS Shortcuts](shortcuts.md)
+- [AetherOS Theming Guide](theming-guide.md)
 
 ## Getting Help
 

@@ -26,5 +26,10 @@ Thumbs.db
 # Test artifacts
 tests/artifacts/
 
+# Keep screenshots directory but ignore auto-generated screenshots
+# (they'll be uploaded as CI artifacts instead)
+artwork/screenshots/*.png
+!artwork/screenshots/README.md
+
 # Generated files
 youros-customizations.tar.gz
