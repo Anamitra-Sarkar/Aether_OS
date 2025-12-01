@@ -1,0 +1,84 @@
+# AetherOS Global Shortcuts Configuration
+# KDE Plasma keyboard shortcuts for window management, workspaces, and more
+# v0.2 - Enhanced shortcuts for power users
+
+[kwin]
+
+# ========== Window Tiling (Windows 11-style) ==========
+# Half-tiling with Meta+Arrow keys
+Window Quick Tile Left=Meta+Left
+Window Quick Tile Right=Meta+Right
+Window Maximize=Meta+Up
+Window Minimize=Meta+Down
+
+# Quarter-tiling with Meta+Ctrl+Arrow keys
+Window Quick Tile Top Left=Meta+Ctrl+Left
+Window Quick Tile Top Right=Meta+Ctrl+Right
+Window Quick Tile Bottom Left=Meta+Ctrl+Shift+Left
+Window Quick Tile Bottom Right=Meta+Ctrl+Shift+Right
+
+# ========== Window Management ==========
+Window Close=Alt+F4
+Window Fullscreen=Meta+Shift+F
+Window Move=Meta+M
+Window Resize=Meta+R
+Toggle Window Raise/Lower=none
+
+# ========== Workspace/Desktop Navigation ==========
+# Like macOS Ctrl+Left/Right
+Switch to Previous Desktop=Ctrl+Alt+Left
+Switch to Next Desktop=Ctrl+Alt+Right
+
+# Direct desktop switching
+Switch to Desktop 1=Meta+1
+Switch to Desktop 2=Meta+2
+Switch to Desktop 3=Meta+3
+Switch to Desktop 4=Meta+4
+
+# Move window to desktop
+Window to Desktop 1=Meta+Shift+1
+Window to Desktop 2=Meta+Shift+2
+Window to Desktop 3=Meta+Shift+3
+Window to Desktop 4=Meta+Shift+4
+
+# ========== Overview & Window Switching ==========
+# Overview like macOS Mission Control
+Overview=Meta+Tab
+ExposeAll=Meta+W
+
+# Window switcher
+Walk Through Windows=Alt+Tab
+Walk Through Windows (Reverse)=Alt+Shift+Tab
+
+# Present windows for current desktop
+Expose=Ctrl+F9
+ExposeAll=Ctrl+F10
+
+# ========== Show Desktop ==========
+Show Desktop=Meta+D
+
+[plasmashell]
+
+# Application launcher
+activate application launcher=Meta
+activate task manager entry 1=Meta+Q
+activate task manager entry 2=none
+activate task manager entry 3=none
+
+# Clipboard
+manage activities=none
+clipboard_action=Meta+V
+
+# Lock screen
+Lock Session=Meta+L
+
+[ksmserver]
+Lock Session=Meta+L
+Log Out=Meta+Shift+Q
+
+[org.kde.spectacle.desktop]
+# Screenshot shortcuts
+_launch=Print
+ActiveWindowScreenShot=Meta+Print
+RectangularRegionScreenShot=Meta+Shift+Print
+FullScreenScreenShot=Print

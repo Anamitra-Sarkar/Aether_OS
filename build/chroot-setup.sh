@@ -291,6 +291,8 @@ copy_configurations() {
         cp "$REPO_ROOT/configs/kde/kdeglobals" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
         cp "$REPO_ROOT/configs/kde/kwinrc" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
         cp "$REPO_ROOT/configs/kde/plasmarc" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
+        cp "$REPO_ROOT/configs/kde/kglobalshortcutsrc" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
+        cp "$REPO_ROOT/configs/kde/kcminputrc" "$CHROOT_DIR/etc/skel/.config/" 2>/dev/null || true
         
         # Copy Latte layout
         if [[ -d "$REPO_ROOT/configs/kde/latte" ]]; then

@@ -1,0 +1,27 @@
+# AetherOS Touchpad Configuration
+# KDE input device settings for touchpad gestures
+# v0.2 - Smooth gestures for Wayland
+
+[Libinput][1267][12433][ELAN1200:00 04F3:3090 Touchpad]
+# Example device settings - will be applied to matching touchpads
+ClickMethod=2
+DisableWhileTyping=true
+Enabled=true
+NaturalScroll=true
+PointerAcceleration=0
+PointerAccelerationProfile=2
+ScrollFactor=1
+TapDragLock=false
+TapToClick=true
+
+# Generic touchpad settings
+[Libinput][*][Touchpad]
+ClickMethod=2
+DisableWhileTyping=true
+Enabled=true
+NaturalScroll=true
+PointerAcceleration=0
+PointerAccelerationProfile=2
+ScrollFactor=1
+TapDragLock=false
+TapToClick=true
