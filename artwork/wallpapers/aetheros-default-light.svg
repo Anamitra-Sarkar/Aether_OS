@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 2160">
+  <defs>
+    <!-- Main gradient: Light neutral to Aether Blue -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C8CFF;stop-opacity:0.3"/>
+      <stop offset="50%" style="stop-color:#F6F8FA;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#E5E7EB;stop-opacity:1"/>
+    </linearGradient>
+    
+    <!-- Subtle accent gradient -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C8CFF;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#7AE7C7;stop-opacity:0.1"/>
+    </linearGradient>
+    
+    <!-- Soft glow for shapes -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="60"/>
+    </filter>
+    
+    <!-- Subtle blur -->
+    <filter id="subtleBlur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="20"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="3840" height="2160" fill="url(#bgGradient)"/>
+  
+  <!-- Abstract soft shapes - top left -->
+  <ellipse cx="400" cy="300" rx="600" ry="400" fill="#6C8CFF" opacity="0.08" filter="url(#softGlow)"/>
+  
+  <!-- Abstract soft shapes - center -->
+  <ellipse cx="1920" cy="1080" rx="1200" ry="800" fill="#7AE7C7" opacity="0.05" filter="url(#softGlow)"/>
+  
+  <!-- Abstract soft shapes - bottom right -->
+  <ellipse cx="3400" cy="1800" rx="800" ry="600" fill="#6C8CFF" opacity="0.06" filter="url(#softGlow)"/>
+  
+  <!-- Subtle geometric lines -->
+  <g opacity="0.04" stroke="#6C8CFF" stroke-width="2" fill="none">
+    <path d="M0,1200 Q960,900 1920,1100 T3840,1000"/>
+    <path d="M0,1400 Q960,1100 1920,1300 T3840,1200"/>
+    <path d="M0,1600 Q960,1300 1920,1500 T3840,1400"/>
+  </g>
+  
+  <!-- Very subtle grid pattern -->
+  <g opacity="0.02" stroke="#6C8CFF" stroke-width="1">
+    <line x1="960" y1="0" x2="960" y2="2160"/>
+    <line x1="1920" y1="0" x2="1920" y2="2160"/>
+    <line x1="2880" y1="0" x2="2880" y2="2160"/>
+    <line x1="0" y1="540" x2="3840" y2="540"/>
+    <line x1="0" y1="1080" x2="3840" y2="1080"/>
+    <line x1="0" y1="1620" x2="3840" y2="1620"/>
+  </g>
+  
+  <!-- Floating geometric accent -->
+  <g transform="translate(3000, 400)" opacity="0.06">
+    <polygon points="0,100 87,50 87,150" fill="#6C8CFF" filter="url(#subtleBlur)"/>
+    <polygon points="100,0 187,50 187,-50" fill="#7AE7C7" filter="url(#subtleBlur)"/>
+  </g>
+  
+  <!-- Small floating circles -->
+  <circle cx="200" cy="1800" r="80" fill="#6C8CFF" opacity="0.05" filter="url(#softGlow)"/>
+  <circle cx="3600" cy="400" r="100" fill="#7AE7C7" opacity="0.04" filter="url(#softGlow)"/>
+  <circle cx="1400" cy="200" r="60" fill="#6C8CFF" opacity="0.04" filter="url(#softGlow)"/>
+</svg>

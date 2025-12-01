@@ -1,0 +1,42 @@
+# AetherOS Plasma Theme Colors
+# Core color definitions for Plasma shell
+
+[Color]
+# Aether Blue - Primary accent
+AccentColor=108,140,255
+
+# Soft Mint - Secondary accent
+SecondaryColor=122,231,199
+
+# Dark mode backgrounds
+BackgroundNormal=15,23,32
+SurfaceNormal=16,19,23
+
+# Light mode backgrounds  
+BackgroundLight=246,248,250
+SurfaceLight=255,255,255
+
+# Text colors
+ForegroundNormal=229,231,235
+ForegroundSecondary=161,169,177
+ForegroundLight=31,41,55
+
+# Highlight
+HighlightColor=108,140,255
+HighlightedTextColor=255,255,255
+
+# Buttons
+ButtonBackground=42,48,56
+ButtonHover=60,70,82
+
+# Window decorations
+TitleBarBackground=15,23,32
+TitleBarForeground=229,231,235
+TitleBarInactiveBackground=16,19,23
+TitleBarInactiveForeground=161,169,177
+
+[ContrastEffect]
+enabled=true
+contrast=0.2
+intensity=1.4
+saturation=1.8

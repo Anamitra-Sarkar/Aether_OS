@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 2160">
+  <defs>
+    <!-- Main gradient: Dark blue-gray base -->
+    <linearGradient id="bgGradientDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F1720;stop-opacity:1"/>
+      <stop offset="40%" style="stop-color:#101317;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#0A0E14;stop-opacity:1"/>
+    </linearGradient>
+    
+    <!-- Accent glow gradient -->
+    <radialGradient id="blueGlow" cx="20%" cy="30%" r="50%">
+      <stop offset="0%" style="stop-color:#6C8CFF;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#6C8CFF;stop-opacity:0"/>
+    </radialGradient>
+    
+    <radialGradient id="mintGlow" cx="80%" cy="70%" r="40%">
+      <stop offset="0%" style="stop-color:#7AE7C7;stop-opacity:0.08"/>
+      <stop offset="100%" style="stop-color:#7AE7C7;stop-opacity:0"/>
+    </radialGradient>
+    
+    <!-- Soft glow filter -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="80"/>
+    </filter>
+    
+    <!-- Blur filter -->
+    <filter id="blur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="40"/>
+    </filter>
+    
+    <!-- Noise texture -->
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" result="noise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feBlend in="SourceGraphic" in2="noise" mode="overlay"/>
+    </filter>
+  </defs>
+  
+  <!-- Base background -->
+  <rect width="3840" height="2160" fill="url(#bgGradientDark)"/>
+  
+  <!-- Accent glows -->
+  <rect width="3840" height="2160" fill="url(#blueGlow)"/>
+  <rect width="3840" height="2160" fill="url(#mintGlow)"/>
+  
+  <!-- Abstract nebula-like shapes -->
+  <ellipse cx="600" cy="400" rx="800" ry="500" fill="#6C8CFF" opacity="0.08" filter="url(#softGlow)"/>
+  <ellipse cx="3200" cy="1700" rx="900" ry="600" fill="#7AE7C7" opacity="0.06" filter="url(#softGlow)"/>
+  <ellipse cx="2000" cy="1000" rx="600" ry="400" fill="#6C8CFF" opacity="0.04" filter="url(#softGlow)"/>
+  
+  <!-- Subtle flowing lines -->
+  <g opacity="0.06" stroke="url(#blueGlow)" stroke-width="3" fill="none">
+    <path d="M0,600 Q500,400 1000,500 T2000,400 T3000,500 T3840,400"/>
+    <path d="M0,1200 Q600,1000 1200,1100 T2400,1000 T3840,1100"/>
+    <path d="M0,1800 Q700,1600 1400,1700 T2800,1600 T3840,1700"/>
+  </g>
+  
+  <!-- Geometric accent elements -->
+  <g transform="translate(300, 1600)" opacity="0.08">
+    <circle r="150" fill="#6C8CFF" filter="url(#blur)"/>
+  </g>
+  
+  <g transform="translate(3500, 300)" opacity="0.06">
+    <circle r="120" fill="#7AE7C7" filter="url(#blur)"/>
+  </g>
+  
+  <!-- Small floating particles -->
+  <circle cx="500" cy="300" r="4" fill="#6C8CFF" opacity="0.4"/>
+  <circle cx="1200" cy="800" r="3" fill="#7AE7C7" opacity="0.3"/>
+  <circle cx="2800" cy="500" r="5" fill="#6C8CFF" opacity="0.35"/>
+  <circle cx="3400" cy="1200" r="4" fill="#7AE7C7" opacity="0.25"/>
+  <circle cx="700" cy="1500" r="3" fill="#6C8CFF" opacity="0.3"/>
+  <circle cx="2200" cy="1800" r="4" fill="#7AE7C7" opacity="0.35"/>
+  <circle cx="1600" cy="400" r="3" fill="#6C8CFF" opacity="0.25"/>
+  <circle cx="3100" cy="900" r="5" fill="#7AE7C7" opacity="0.3"/>
+  
+  <!-- Subtle star-like elements -->
+  <g fill="#FFFFFF" opacity="0.15">
+    <circle cx="200" cy="200" r="2"/>
+    <circle cx="800" cy="600" r="1.5"/>
+    <circle cx="1400" cy="300" r="2"/>
+    <circle cx="2000" cy="700" r="1.5"/>
+    <circle cx="2600" cy="200" r="2"/>
+    <circle cx="3200" cy="600" r="1.5"/>
+    <circle cx="3600" cy="300" r="2"/>
+    <circle cx="400" cy="1000" r="1.5"/>
+    <circle cx="1000" cy="1400" r="2"/>
+    <circle cx="1600" cy="1100" r="1.5"/>
+    <circle cx="2200" cy="1500" r="2"/>
+    <circle cx="2800" cy="1200" r="1.5"/>
+    <circle cx="3400" cy="1600" r="2"/>
+    <circle cx="600" cy="1900" r="1.5"/>
+    <circle cx="1800" cy="1900" r="2"/>
+    <circle cx="3000" cy="2000" r="1.5"/>
+  </g>
+  
+  <!-- Very subtle grid overlay -->
+  <g opacity="0.015" stroke="#6C8CFF" stroke-width="1">
+    <line x1="960" y1="0" x2="960" y2="2160"/>
+    <line x1="1920" y1="0" x2="1920" y2="2160"/>
+    <line x1="2880" y1="0" x2="2880" y2="2160"/>
+    <line x1="0" y1="540" x2="3840" y2="540"/>
+    <line x1="0" y1="1080" x2="3840" y2="1080"/>
+    <line x1="0" y1="1620" x2="3840" y2="1620"/>
+  </g>
+</svg>

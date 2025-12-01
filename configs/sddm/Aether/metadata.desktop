@@ -1,0 +1,14 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=X-SDDM-Theme
+Name=Aether
+Comment=Modern login theme for AetherOS
+Version=1.0
+Website=https://github.com/aetheros
+Screenshot=preview.png
+MainScript=Main.qml
+ConfigFile=theme.conf
+TranslationsDirectory=translations
+Author=AetherOS Team
+Email=aetheros@example.com
+License=GPL-3.0

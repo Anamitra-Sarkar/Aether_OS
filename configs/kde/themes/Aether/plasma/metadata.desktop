@@ -1,0 +1,24 @@
+[Desktop Entry]
+Name=Aether
+Comment=AetherOS Plasma Theme
+X-KDE-PluginInfo-Author=AetherOS Team
+X-KDE-PluginInfo-Email=aetheros@example.com
+X-KDE-PluginInfo-Name=aether
+X-KDE-PluginInfo-Version=1.0
+X-KDE-PluginInfo-Website=https://github.com/aetheros
+X-KDE-PluginInfo-Category=
+X-KDE-PluginInfo-License=GPL-3.0
+X-Plasma-API=5.0
+X-Plasma-MainScript=
+
+[Wallpaper]
+defaultWallpaperTheme=aetheros-default-dark
+defaultFileSuffix=.png
+defaultWidth=3840
+defaultHeight=2160
+
+[ContrastEffect]
+enabled=true
+contrast=0.2
+intensity=1.4
+saturation=1.8

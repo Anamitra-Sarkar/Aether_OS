@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="settingsGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8EADFF"/>
+      <stop offset="100%" style="stop-color:#6C8CFF"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main gear -->
+  <path d="M24,4 L27,4 L28,8 C29.5,8.4 30.9,9 32.2,9.8 L35.5,7.5 L38.5,10.5 L36.2,13.8 C37,15.1 37.6,16.5 38,18 L42,19 L42,22 L44,22 L44,26 L42,26 L42,29 L38,30 C37.6,31.5 37,32.9 36.2,34.2 L38.5,37.5 L35.5,40.5 L32.2,38.2 C30.9,39 29.5,39.6 28,40 L27,44 L21,44 L20,40 C18.5,39.6 17.1,39 15.8,38.2 L12.5,40.5 L9.5,37.5 L11.8,34.2 C11,32.9 10.4,31.5 10,30 L6,29 L6,26 L4,26 L4,22 L6,22 L6,19 L10,18 C10.4,16.5 11,15.1 11.8,13.8 L9.5,10.5 L12.5,7.5 L15.8,9.8 C17.1,9 18.5,8.4 20,8 L21,4 L24,4 Z" fill="url(#settingsGradient)"/>
+  
+  <!-- Inner circle (cutout) -->
+  <circle cx="24" cy="24" r="8" fill="#0F1720"/>
+  
+  <!-- Center highlight -->
+  <circle cx="24" cy="24" r="5" fill="none" stroke="#7AE7C7" stroke-width="2"/>
+</svg>

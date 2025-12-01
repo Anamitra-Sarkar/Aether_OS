@@ -1,0 +1,460 @@
+/* AetherOS GTK-3 Theme Override */
+/* Applies design tokens for consistency with Qt/Plasma theme */
+
+/* Color Variables */
+@define-color aether_accent #6C8CFF;
+@define-color aether_accent_secondary #7AE7C7;
+@define-color aether_bg_dark #0F1720;
+@define-color aether_bg_light #F6F8FA;
+@define-color aether_surface_dark #101317;
+@define-color aether_surface_light #FFFFFF;
+@define-color aether_text_dark #E5E7EB;
+@define-color aether_text_light #1F2937;
+@define-color aether_text_secondary #9CA3AF;
+
+/* Base Colors */
+@define-color theme_fg_color @aether_text_dark;
+@define-color theme_bg_color @aether_bg_dark;
+@define-color theme_text_color @aether_text_dark;
+@define-color theme_selected_bg_color @aether_accent;
+@define-color theme_selected_fg_color #FFFFFF;
+
+/* Window Background */
+window {
+    background-color: @aether_bg_dark;
+    color: @aether_text_dark;
+}
+
+/* Header Bar */
+headerbar {
+    background: linear-gradient(to bottom, alpha(@aether_surface_dark, 0.95), @aether_bg_dark);
+    border-bottom: 1px solid alpha(@aether_accent, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    padding: 6px 8px;
+    min-height: 36px;
+}
+
+headerbar:backdrop {
+    background: @aether_bg_dark;
+}
+
+headerbar .title {
+    font-weight: 600;
+    color: @aether_text_dark;
+}
+
+headerbar .subtitle {
+    font-size: 0.9em;
+    color: @aether_text_secondary;
+}
+
+/* Buttons */
+button {
+    border-radius: 10px;
+    padding: 8px 16px;
+    transition: all 150ms cubic-bezier(0.22, 1, 0.36, 1);
+    background: linear-gradient(to bottom, alpha(@aether_surface_dark, 0.8), alpha(@aether_surface_dark, 0.6));
+    border: 1px solid alpha(@aether_accent, 0.2);
+    color: @aether_text_dark;
+    min-height: 24px;
+}
+
+button:hover {
+    background: linear-gradient(to bottom, alpha(@aether_accent, 0.3), alpha(@aether_accent, 0.1));
+    border-color: @aether_accent;
+    box-shadow: 0 0 8px alpha(@aether_accent, 0.3);
+}
+
+button:active {
+    background: alpha(@aether_accent, 0.4);
+}
+
+button.suggested-action {
+    background: linear-gradient(to bottom, @aether_accent, shade(@aether_accent, 0.9));
+    color: white;
+    border: none;
+}
+
+button.suggested-action:hover {
+    background: linear-gradient(to bottom, shade(@aether_accent, 1.1), @aether_accent);
+    box-shadow: 0 4px 12px alpha(@aether_accent, 0.4);
+}
+
+button.destructive-action {
+    background: linear-gradient(to bottom, #E53935, #C62828);
+    color: white;
+    border: none;
+}
+
+button.flat {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+button.flat:hover {
+    background: alpha(@aether_accent, 0.15);
+}
+
+/* Entry Fields */
+entry {
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: alpha(@aether_surface_dark, 0.6);
+    border: 1px solid alpha(@aether_text_dark, 0.2);
+    transition: all 150ms cubic-bezier(0.22, 1, 0.36, 1);
+    color: @aether_text_dark;
+    min-height: 20px;
+}
+
+entry:focus {
+    border-color: @aether_accent;
+    box-shadow: 0 0 0 3px alpha(@aether_accent, 0.2);
+}
+
+entry:disabled {
+    background: alpha(@aether_surface_dark, 0.3);
+    color: @aether_text_secondary;
+}
+
+/* Labels */
+label {
+    color: @aether_text_dark;
+}
+
+label.dim-label {
+    color: @aether_text_secondary;
+}
+
+/* Links */
+*:link,
+button.link {
+    color: @aether_accent;
+}
+
+*:link:hover,
+button.link:hover {
+    color: shade(@aether_accent, 1.2);
+}
+
+/* Lists and Views */
+.view,
+treeview {
+    background: @aether_surface_dark;
+    color: @aether_text_dark;
+}
+
+.view:selected,
+treeview:selected {
+    background: @aether_accent;
+    color: white;
+}
+
+row {
+    border-radius: 8px;
+    margin: 2px 4px;
+    padding: 8px 12px;
+    transition: background 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+row:hover {
+    background: alpha(@aether_accent, 0.1);
+}
+
+row:selected {
+    background: alpha(@aether_accent, 0.25);
+}
+
+/* Scrollbars */
+scrollbar {
+    background: transparent;
+    border: none;
+}
+
+scrollbar slider {
+    background: alpha(@aether_text_dark, 0.3);
+    border-radius: 6px;
+    min-width: 8px;
+    min-height: 8px;
+}
+
+scrollbar slider:hover {
+    background: alpha(@aether_accent, 0.5);
+}
+
+scrollbar slider:active {
+    background: @aether_accent;
+}
+
+/* Switches */
+switch {
+    border-radius: 14px;
+    background: alpha(@aether_surface_dark, 0.8);
+    border: 1px solid alpha(@aether_text_dark, 0.2);
+    min-width: 48px;
+    min-height: 28px;
+}
+
+switch:checked {
+    background: @aether_accent;
+    border-color: @aether_accent;
+}
+
+switch slider {
+    background: white;
+    border-radius: 50%;
+    min-width: 24px;
+    min-height: 24px;
+    margin: 1px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Check Buttons */
+check {
+    border-radius: 6px;
+    min-width: 22px;
+    min-height: 22px;
+    border: 1px solid alpha(@aether_text_dark, 0.3);
+    background: alpha(@aether_surface_dark, 0.6);
+}
+
+check:checked {
+    background: @aether_accent;
+    border-color: @aether_accent;
+}
+
+/* Radio Buttons */
+radio {
+    border-radius: 50%;
+    min-width: 22px;
+    min-height: 22px;
+    border: 1px solid alpha(@aether_text_dark, 0.3);
+    background: alpha(@aether_surface_dark, 0.6);
+}
+
+radio:checked {
+    background: @aether_accent;
+    border-color: @aether_accent;
+}
+
+/* Popovers and Menus */
+popover,
+popover.background {
+    background: @aether_surface_dark;
+    border-radius: 12px;
+    border: 1px solid alpha(@aether_accent, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+menu {
+    background: @aether_surface_dark;
+    border-radius: 12px;
+    border: 1px solid alpha(@aether_accent, 0.2);
+    padding: 6px;
+}
+
+menuitem {
+    border-radius: 8px;
+    padding: 8px 12px;
+    min-height: 24px;
+}
+
+menuitem:hover {
+    background: alpha(@aether_accent, 0.15);
+}
+
+/* Progress Bars */
+progressbar trough {
+    background: alpha(@aether_surface_dark, 0.6);
+    border-radius: 6px;
+    min-height: 6px;
+}
+
+progressbar progress {
+    background: linear-gradient(to right, @aether_accent, @aether_accent_secondary);
+    border-radius: 6px;
+}
+
+/* Level Bars */
+levelbar trough {
+    background: alpha(@aether_surface_dark, 0.6);
+    border-radius: 6px;
+}
+
+levelbar block.filled {
+    background: @aether_accent;
+    border-radius: 6px;
+}
+
+/* Spinners */
+spinner {
+    color: @aether_accent;
+}
+
+/* Notebooks/Tabs */
+notebook header tab {
+    border-radius: 10px 10px 0 0;
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    color: @aether_text_secondary;
+}
+
+notebook header tab:checked {
+    background: alpha(@aether_accent, 0.2);
+    border-bottom: 2px solid @aether_accent;
+    color: @aether_text_dark;
+}
+
+notebook header tab:hover:not(:checked) {
+    background: alpha(@aether_accent, 0.1);
+}
+
+/* Sliders / Scales */
+scale trough {
+    background: alpha(@aether_surface_dark, 0.6);
+    border-radius: 6px;
+    min-height: 6px;
+}
+
+scale highlight {
+    background: @aether_accent;
+    border-radius: 6px;
+}
+
+scale slider {
+    background: white;
+    border-radius: 50%;
+    min-width: 20px;
+    min-height: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Info Bars */
+infobar {
+    border-radius: 10px;
+    margin: 4px;
+}
+
+infobar.info {
+    background: alpha(@aether_accent, 0.2);
+    border: 1px solid @aether_accent;
+}
+
+infobar.warning {
+    background: alpha(#F59E0B, 0.2);
+    border: 1px solid #F59E0B;
+}
+
+infobar.error {
+    background: alpha(#EF4444, 0.2);
+    border: 1px solid #EF4444;
+}
+
+infobar.question {
+    background: alpha(@aether_accent_secondary, 0.2);
+    border: 1px solid @aether_accent_secondary;
+}
+
+/* Tooltips */
+tooltip,
+tooltip.background {
+    background: @aether_surface_dark;
+    border-radius: 8px;
+    border: 1px solid alpha(@aether_accent, 0.3);
+    padding: 8px 12px;
+    color: @aether_text_dark;
+}
+
+/* Window Decorations */
+decoration {
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Sidebars */
+.sidebar {
+    background: @aether_surface_dark;
+    border-right: 1px solid alpha(@aether_text_dark, 0.1);
+}
+
+.sidebar row {
+    margin: 2px 6px;
+}
+
+.sidebar row:selected {
+    background: alpha(@aether_accent, 0.3);
+}
+
+/* Separators */
+separator {
+    background: alpha(@aether_text_dark, 0.1);
+    min-height: 1px;
+    min-width: 1px;
+}
+
+/* Frame/Box styling */
+frame {
+    border-radius: 10px;
+    border: 1px solid alpha(@aether_text_dark, 0.1);
+}
+
+/* Dialogs */
+messagedialog .titlebar {
+    background: @aether_bg_dark;
+    border-bottom: 1px solid alpha(@aether_accent, 0.2);
+}
+
+messagedialog .dialog-action-area button {
+    min-width: 80px;
+}
+
+/* Calendar */
+calendar {
+    background: @aether_surface_dark;
+    border-radius: 10px;
+    padding: 8px;
+}
+
+calendar:selected {
+    background: @aether_accent;
+    border-radius: 6px;
+}
+
+/* Spin Buttons */
+spinbutton {
+    border-radius: 10px;
+    background: alpha(@aether_surface_dark, 0.6);
+    border: 1px solid alpha(@aether_text_dark, 0.2);
+}
+
+spinbutton button {
+    border-radius: 0;
+    min-width: 24px;
+}
+
+spinbutton button:first-child {
+    border-radius: 10px 0 0 10px;
+}
+
+spinbutton button:last-child {
+    border-radius: 0 10px 10px 0;
+}
+
+/* Combo Boxes */
+combobox button {
+    border-radius: 10px;
+}
+
+combobox arrow {
+    min-width: 16px;
+    min-height: 16px;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0ms !important;
+        animation-duration: 0ms !important;
+    }
+}
