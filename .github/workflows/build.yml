@@ -16,9 +16,15 @@ on:
         default: 'false'
         type: boolean
 
+# Limit permissions for security
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout repository
@@ -72,6 +78,8 @@ jobs:
   test:
     needs: build
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout repository
@@ -103,6 +111,8 @@ jobs:
 
   lint:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout repository
@@ -133,6 +143,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build, test]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
