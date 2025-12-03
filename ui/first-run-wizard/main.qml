@@ -38,9 +38,9 @@ ApplicationWindow {
     property string userName: ""
     property string userPassword: ""
     property string selectedTheme: "dark"
-    property bool telemetryEnabled: false
-    property bool restrictedCodecs: false
-    property bool autoUpdates: true
+    property bool privacyMode: true
+    property bool installFlatpaks: true
+    property bool updateNotifications: true
     
     Rectangle {
         anchors.fill: parent
@@ -141,8 +141,9 @@ ApplicationWindow {
                     accentColor: root.accentColor
                     textColor: root.textColor
                     surfaceColor: root.surfaceDark
-                    onTelemetryChanged: root.telemetryEnabled = enabled
-                    onRestrictedChanged: root.restrictedCodecs = enabled
+                    onPrivacyModeChanged: root.privacyMode = enabled
+                    onInstallFlatpaksChanged: root.installFlatpaks = enabled
+                    onUpdateNotificationsChanged: root.updateNotifications = enabled
                 }
             }
             
@@ -215,15 +216,17 @@ ApplicationWindow {
         console.log("Setup complete!")
         console.log("User:", userName)
         console.log("Theme:", selectedTheme)
-        console.log("Telemetry:", telemetryEnabled)
-        console.log("Restricted codecs:", restrictedCodecs)
+        console.log("Privacy Mode:", privacyMode)
+        console.log("Install Flatpaks:", installFlatpaks)
+        console.log("Update Notifications:", updateNotifications)
         
         // Apply settings by calling the configure script
         // In production, this launches: /usr/share/aetheros/scripts/configure-first-run.sh
         // with appropriate flags based on user selections:
         //   --theme [light|dark]
-        //   --privacy (if telemetryEnabled is false)
-        //   --restricted (if restrictedCodecs is true)
+        //   --privacy (if privacyMode is enabled)
+        //   --flatpaks (if installFlatpaks is enabled)
+        //   --updates (if updateNotifications is enabled)
         //   --all (to complete first-run)
         
         // For now, mark first-run as complete and exit

@@ -88,7 +88,7 @@ Item {
         Text {
             Layout.alignment: Qt.AlignHCenter
             Layout.maximumWidth: 450
-            text: "A beautiful, fast, and privacy-focused desktop experience.\nLet's personalize your system in just a few quick steps."
+            text: "Let's personalize your system in just a few quick steps."
             font.pixelSize: 15
             color: Qt.rgba(1, 1, 1, 0.7)
             wrapMode: Text.WordWrap

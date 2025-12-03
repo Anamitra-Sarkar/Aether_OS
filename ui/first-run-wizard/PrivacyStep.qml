@@ -11,8 +11,9 @@ Item {
     property color textColor: "#E5E7EB"
     property color surfaceColor: "#101317"
     
-    signal telemetryChanged(bool enabled)
-    signal restrictedChanged(bool enabled)
+    signal privacyModeChanged(bool enabled)
+    signal installFlatpaksChanged(bool enabled)
+    signal updateNotificationsChanged(bool enabled)
     
     ColumnLayout {
         anchors.centerIn: parent
@@ -21,7 +22,7 @@ Item {
         
         Text {
             Layout.alignment: Qt.AlignHCenter
-            text: "Privacy & Extras"
+            text: "Customize Your Experience"
             font.pixelSize: 24
             font.weight: Font.DemiBold
             color: textColor
@@ -30,7 +31,7 @@ Item {
         Text {
             Layout.alignment: Qt.AlignHCenter
             Layout.maximumWidth: 400
-            text: "Configure privacy settings and optional features"
+            text: "Choose your preferences — all settings can be changed later"
             font.pixelSize: 14
             color: Qt.rgba(1, 1, 1, 0.6)
             wrapMode: Text.WordWrap
@@ -54,13 +55,6 @@ Item {
                 anchors.margins: 12
                 spacing: 16
                 
-                Text {
-                    text: "Privacy"
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
-                    color: accentColor
-                }
-                
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 12
@@ -70,13 +64,14 @@ Item {
                         spacing: 4
                         
                         Text {
-                            text: "Send usage statistics"
+                            text: "Privacy Mode"
                             font.pixelSize: 14
+                            font.weight: Font.Medium
                             color: textColor
                         }
                         
                         Text {
-                            text: "Help improve AetherOS by sending anonymous usage data"
+                            text: "Disable telemetry and tracking (recommended)"
                             font.pixelSize: 11
                             color: Qt.rgba(1, 1, 1, 0.5)
                             wrapMode: Text.WordWrap
@@ -85,10 +80,10 @@ Item {
                     }
                     
                     Switch {
-                        id: telemetrySwitch
-                        checked: false
+                        id: privacySwitch
+                        checked: true
                         
-                        onCheckedChanged: telemetryChanged(checked)
+                        onCheckedChanged: privacyModeChanged(checked)
                     }
                 }
             }
@@ -109,11 +104,42 @@ Item {
                 anchors.margins: 12
                 spacing: 16
                 
-                Text {
-                    text: "Optional Extras"
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
-                    color: accentColor
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        
+                        Text {
+                            text: "Install Popular Flatpaks"
+                            font.pixelSize: 14
+                            font.weight: Font.Medium
+                            color: textColor
+                        }
+                        
+                        Text {
+                            text: "Add Flathub and install commonly used apps"
+                            font.pixelSize: 11
+                            color: Qt.rgba(1, 1, 1, 0.5)
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
+                    
+                    Switch {
+                        id: flatpaksSwitch
+                        checked: true
+                        
+                        onCheckedChanged: installFlatpaksChanged(checked)
+                    }
+                }
+                
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Qt.rgba(1, 1, 1, 0.1)
                 }
                 
                 RowLayout {
@@ -125,13 +151,14 @@ Item {
                         spacing: 4
                         
                         Text {
-                            text: "Install restricted codecs"
+                            text: "Enable Update Notifications"
                             font.pixelSize: 14
+                            font.weight: Font.Medium
                             color: textColor
                         }
                         
                         Text {
-                            text: "Enable playback of MP3, H.264, and other media formats"
+                            text: "Get notified about system and app updates"
                             font.pixelSize: 11
                             color: Qt.rgba(1, 1, 1, 0.5)
                             wrapMode: Text.WordWrap
@@ -140,10 +167,10 @@ Item {
                     }
                     
                     Switch {
-                        id: restrictedSwitch
-                        checked: false
+                        id: updatesSwitch
+                        checked: true
                         
-                        onCheckedChanged: restrictedChanged(checked)
+                        onCheckedChanged: updateNotificationsChanged(checked)
                     }
                 }
             }
@@ -169,7 +196,7 @@ Item {
                 
                 Text {
                     Layout.fillWidth: true
-                    text: "These settings can be changed later in System Settings"
+                    text: "All settings can be changed anytime in System Settings"
                     font.pixelSize: 11
                     color: Qt.rgba(1, 1, 1, 0.7)
                     wrapMode: Text.WordWrap

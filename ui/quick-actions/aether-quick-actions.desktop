@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Aether Quick Actions
+Comment=Quick access to system tools and diagnostics
+Exec=/usr/share/aetheros/ui/quick-actions/run.sh
+Icon=preferences-system
+Terminal=false
+Type=Application
+Categories=System;Settings;Utility;
+Keywords=actions;tools;diagnostics;health;backup;logs;
+StartupNotify=true
