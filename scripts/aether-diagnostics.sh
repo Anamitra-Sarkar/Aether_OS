@@ -27,7 +27,8 @@ RESET="\033[0m"
 # Logging
 # =============================================================================
 log() {
-    local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    local message
+    message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
     echo -e "$message"
     mkdir -p "$LOG_DIR"
     echo "$message" >> "$LOG_FILE" 2>/dev/null || true
@@ -67,7 +68,7 @@ check_sddm() {
         log_pass "SDDM is running"
         
         # Check SDDM theme
-        if [[ -d /usr/share/sddm/themes/aether* ]] || [[ -d /usr/share/sddm/themes/breeze ]]; then
+        if compgen -G "/usr/share/sddm/themes/aether*" > /dev/null || [[ -d /usr/share/sddm/themes/breeze ]]; then
             log_pass "SDDM theme is installed"
         else
             log_warn "SDDM theme directory not found"
