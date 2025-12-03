@@ -159,6 +159,31 @@ This will:
 - Take a screenshot
 - Exit with code 0 on success
 
+**Note:** This test is optional in CI (marked as `continue-on-error: true`) due to resource constraints and timing variability on GitHub-hosted runners. It is highly recommended for local testing and manual validation.
+
+### Test Mode Flag
+
+For automated testing scenarios, you can enable test mode:
+
+```bash
+# Enable test mode (as root)
+sudo mkdir -p /etc/aetheros
+sudo touch /etc/aetheros/test-mode
+
+# On first login, diagnostics will run automatically
+# The test-mode script will display results in a dialog
+```
+
+This is useful for:
+- Automated test environments
+- CI systems with GUI access
+- Manual validation after installation
+
+To disable test mode:
+```bash
+sudo rm /etc/aetheros/test-mode
+```
+
 ### UI Sanity Checks
 
 Run lightweight system checks:

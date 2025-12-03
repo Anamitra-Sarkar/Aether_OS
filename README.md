@@ -163,7 +163,11 @@ After success:
 
 # Testing
 
-## QEMU Boot Test
+> **Note:** CI does not auto-boot ISO. Manual QEMU boot testing is recommended for validation.
+
+## Optional Local Boot Test
+
+Manual QEMU testing is the recommended way to validate the ISO:
 
 ```bash
 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
@@ -176,6 +180,8 @@ This will:
 3. Save screenshot to:
    `tests/artifacts/desktop.png`
 4. Exit 0 on success
+
+**Note:** This test is optional in CI due to resource constraints but is valuable for local testing.
 
 ## UI Sanity Check
 
