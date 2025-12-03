@@ -66,7 +66,7 @@ ApplicationWindow {
                 description: "System settings"
                 icon: "⚙️"
                 onClicked: {
-                    Qt.openUrlExternally("file:///usr/share/aetheros/ui/control-center/run.sh")
+                    Qt.openUrlExternally("file:///usr/share/applications/aether-control-center.desktop")
                 }
             }
             
@@ -77,7 +77,7 @@ ApplicationWindow {
                 description: "System diagnostics"
                 icon: "❤️"
                 onClicked: {
-                    executeCommand("konsole -e /usr/share/aetheros/scripts/aether-health.sh")
+                    Qt.openUrlExternally("file:///usr/bin/konsole?args=-e,/usr/share/aetheros/scripts/aether-health.sh")
                 }
             }
             
@@ -88,7 +88,7 @@ ApplicationWindow {
                 description: "Full system check"
                 icon: "🔍"
                 onClicked: {
-                    executeCommand("konsole -e /usr/share/aetheros/scripts/aether-diagnostics.sh")
+                    Qt.openUrlExternally("file:///usr/bin/konsole?args=-e,/usr/share/aetheros/scripts/aether-diagnostics.sh")
                 }
             }
             
@@ -99,7 +99,7 @@ ApplicationWindow {
                 description: "System backups"
                 icon: "💾"
                 onClicked: {
-                    executeCommand("pkexec timeshift-launcher")
+                    Qt.openUrlExternally("file:///usr/bin/timeshift-launcher")
                 }
             }
             
@@ -110,7 +110,7 @@ ApplicationWindow {
                 description: "View system logs"
                 icon: "📋"
                 onClicked: {
-                    executeCommand("dolphin ~/.local/share/aetheros/logs/")
+                    Qt.openUrlExternally("file://" + Qt.resolvedUrl("~/.local/share/aetheros/logs/").toString().replace("file://", ""))
                 }
             }
             
@@ -121,7 +121,7 @@ ApplicationWindow {
                 description: "Check for updates"
                 icon: "🔄"
                 onClicked: {
-                    Qt.openUrlExternally("file:///usr/share/aetheros/ui/updater/run.sh")
+                    Qt.openUrlExternally("file:///usr/share/applications/aether-updater.desktop")
                 }
             }
         }
@@ -154,85 +154,6 @@ ApplicationWindow {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
-            }
-        }
-    }
-    
-    // Helper function to execute commands
-    function executeCommand(command) {
-        console.log("Executing:", command)
-        // Use Qt.openUrlExternally or create a C++ helper for process execution
-        // For now, this is a placeholder
-        var script = "#!/bin/bash\n" + command
-        // In a real implementation, write to temp file and execute
-    }
-    
-    Component {
-        id: actionButtonComponent
-        
-        Rectangle {
-            id: button
-            
-            property string title: ""
-            property string description: ""
-            property string icon: ""
-            signal clicked()
-            
-            color: button.hovered ? Qt.lighter(root.accentColor, 1.9) : root.surfaceColor
-            border.color: button.hovered ? root.accentColor : "#E2E8F0"
-            border.width: 2
-            radius: root.cornerRadius
-            
-            property bool hovered: false
-            
-            MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                
-                onEntered: button.hovered = true
-                onExited: button.hovered = false
-                onClicked: button.clicked()
-            }
-            
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 15
-                spacing: 8
-                
-                Label {
-                    text: button.icon
-                    font.pixelSize: 32
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                
-                Label {
-                    text: button.title
-                    font.pixelSize: 15
-                    font.bold: true
-                    color: root.textColor
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                
-                Label {
-                    text: button.description
-                    font.pixelSize: 12
-                    color: root.secondaryTextColor
-                    Layout.alignment: Qt.AlignHCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                }
-                
-                Item { Layout.fillHeight: true }
-            }
-            
-            Behavior on color {
-                ColorAnimation { duration: root.animDuration }
-            }
-            
-            Behavior on border.color {
-                ColorAnimation { duration: root.animDuration }
             }
         }
     }

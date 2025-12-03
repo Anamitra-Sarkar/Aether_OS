@@ -156,7 +156,7 @@ check_apparmor() {
             # Count loaded profiles
             if [[ $EUID -eq 0 ]]; then
                 local profiles
-                profiles=$(aa-status 2>/dev/null | grep "profiles are loaded" | grep -oP '^\d+' || echo "0")
+                profiles=$(aa-status 2>/dev/null | grep "profiles are loaded" | awk '{print $1}' || echo "0")
                 log_info "AppArmor profiles loaded: $profiles"
             else
                 log_info "AppArmor is running (run with sudo for profile count)"
