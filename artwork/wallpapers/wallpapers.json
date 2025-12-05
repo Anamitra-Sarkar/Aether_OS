@@ -27,6 +27,20 @@
       "description": "Abstract space/nebula style with star field and colorful clouds",
       "mode": "dark",
       "default": false
+    },
+    {
+      "name": "aetheros-waves",
+      "file": "aetheros-waves.svg",
+      "description": "Flowing waves with gradient colors - v1.1 addition",
+      "mode": "dark",
+      "default": false
+    },
+    {
+      "name": "aetheros-minimal",
+      "file": "aetheros-minimal.svg",
+      "description": "Minimal geometric design with central focus - v1.1 addition",
+      "mode": "dark",
+      "default": false
     }
   ],
   "installation": {
