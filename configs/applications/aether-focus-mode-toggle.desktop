@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Toggle Focus Mode
+GenericName=Focus Mode Toggle
+Comment=Toggle Do Not Disturb notifications
+Icon=notifications-disabled
+Exec=/usr/share/aetheros/scripts/aether-focus-mode.sh toggle
+Terminal=false
+Type=Application
+Categories=System;Settings;
+Keywords=focus;dnd;notifications;quiet;
+StartupNotify=false

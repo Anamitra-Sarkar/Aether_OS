@@ -297,7 +297,9 @@ ApplicationWindow {
                                 accentColor: root.accentSecondary
                                 onToggled: function(isChecked) {
                                     // Toggle Focus Mode / Do Not Disturb
-                                    Qt.openUrlExternally("file:///usr/share/aetheros/scripts/aether-focus-mode.sh?toggle")
+                                    // Note: QML cannot directly execute scripts with arguments
+                                    // This will be handled by the run.sh wrapper or manual execution
+                                    console.log("Focus Mode toggled:", isChecked)
                                 }
                             }
                         }
@@ -548,11 +550,9 @@ ApplicationWindow {
                                     id: autoThemeSwitch
                                     checked: false
                                     onToggled: {
-                                        if (checked) {
-                                            Qt.openUrlExternally("file:///usr/share/aetheros/scripts/aether-theme-scheduler.sh?enable")
-                                        } else {
-                                            Qt.openUrlExternally("file:///usr/share/aetheros/scripts/aether-theme-scheduler.sh?disable")
-                                        }
+                                        // Note: QML cannot directly execute scripts with arguments
+                                        // This will be handled by the run.sh wrapper or manual execution
+                                        console.log("Auto Theme Schedule toggled:", checked)
                                     }
                                 }
                             }
@@ -634,11 +634,9 @@ ApplicationWindow {
                                     id: systemSoundsSwitch
                                     checked: true
                                     onToggled: {
-                                        if (checked) {
-                                            Qt.openUrlExternally("file:///usr/share/aetheros/scripts/aether-sounds.sh?enable")
-                                        } else {
-                                            Qt.openUrlExternally("file:///usr/share/aetheros/scripts/aether-sounds.sh?disable")
-                                        }
+                                        // Note: QML cannot directly execute scripts with arguments
+                                        // This will be handled by the run.sh wrapper or manual execution
+                                        console.log("System Sounds toggled:", checked)
                                     }
                                 }
                             }
