@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Toggle System Sounds
+GenericName=System Sounds Toggle
+Comment=Enable or disable system sounds
+Icon=audio-volume-high
+Exec=/usr/share/aetheros/scripts/aether-sounds.sh toggle
+Terminal=false
+Type=Application
+Categories=System;Settings;
+Keywords=sounds;audio;notifications;
+StartupNotify=false

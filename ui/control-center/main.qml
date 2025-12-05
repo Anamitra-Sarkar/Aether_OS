@@ -132,14 +132,14 @@ ApplicationWindow {
                             spacing: 2
                             
                             Text {
-                                text: "AetherOS v1.0 RC"
+                                text: "AetherOS v1.1"
                                 font.pixelSize: 13
                                 font.weight: Font.Medium
                                 color: textColor
                             }
                             
                             Text {
-                                text: "Release Candidate"
+                                text: "Quality of Life Update"
                                 font.pixelSize: 10
                                 color: textMuted
                             }
@@ -195,7 +195,7 @@ ApplicationWindow {
                                         color: textMuted
                                     }
                                     Text {
-                                        text: "AetherOS v1.0 RC"
+                                        text: "AetherOS v1.1"
                                         font.pixelSize: 16
                                         font.weight: Font.Medium
                                         color: textColor
@@ -295,6 +295,12 @@ ApplicationWindow {
                                 iconSource: "notifications-disabled"
                                 checked: false
                                 accentColor: root.accentSecondary
+                                onToggled: function(isChecked) {
+                                    // Toggle Focus Mode / Do Not Disturb
+                                    // Note: QML cannot directly execute scripts with arguments
+                                    // This will be handled by the run.sh wrapper or manual execution
+                                    console.log("Focus Mode toggled:", isChecked)
+                                }
                             }
                         }
                         
@@ -499,6 +505,59 @@ ApplicationWindow {
                             }
                         }
                         
+                        // Auto Theme Schedule
+                        Text {
+                            text: "Auto Theme Schedule"
+                            font.pixelSize: 14
+                            color: textMuted
+                            Layout.topMargin: 16
+                        }
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 60
+                            radius: 12
+                            color: surfaceDark
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 12
+                                
+                                Text {
+                                    text: "🌓"
+                                    font.pixelSize: 20
+                                }
+                                
+                                ColumnLayout {
+                                    spacing: 2
+                                    Layout.fillWidth: true
+                                    
+                                    Text {
+                                        text: "Auto Light/Dark"
+                                        font.pixelSize: 14
+                                        font.weight: Font.Medium
+                                        color: textColor
+                                    }
+                                    Text {
+                                        text: "Light theme in day, dark at night"
+                                        font.pixelSize: 11
+                                        color: textMuted
+                                    }
+                                }
+                                
+                                Switch {
+                                    id: autoThemeSwitch
+                                    checked: false
+                                    onToggled: {
+                                        // Note: QML cannot directly execute scripts with arguments
+                                        // This will be handled by the run.sh wrapper or manual execution
+                                        console.log("Auto Theme Schedule toggled:", checked)
+                                    }
+                                }
+                            }
+                        }
+                        
                         // Accent color
                         Text {
                             text: "Accent Color"
@@ -525,6 +584,59 @@ ApplicationWindow {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: console.log("Select accent:", modelData)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // System Sounds
+                        Text {
+                            text: "System Sounds"
+                            font.pixelSize: 14
+                            color: textMuted
+                            Layout.topMargin: 16
+                        }
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 60
+                            radius: 12
+                            color: surfaceDark
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 12
+                                
+                                Text {
+                                    text: "🔊"
+                                    font.pixelSize: 20
+                                }
+                                
+                                ColumnLayout {
+                                    spacing: 2
+                                    Layout.fillWidth: true
+                                    
+                                    Text {
+                                        text: "Enable System Sounds"
+                                        font.pixelSize: 14
+                                        font.weight: Font.Medium
+                                        color: textColor
+                                    }
+                                    Text {
+                                        text: "Login, notification, and alert sounds"
+                                        font.pixelSize: 11
+                                        color: textMuted
+                                    }
+                                }
+                                
+                                Switch {
+                                    id: systemSoundsSwitch
+                                    checked: true
+                                    onToggled: {
+                                        // Note: QML cannot directly execute scripts with arguments
+                                        // This will be handled by the run.sh wrapper or manual execution
+                                        console.log("System Sounds toggled:", checked)
                                     }
                                 }
                             }
@@ -915,7 +1027,7 @@ ApplicationWindow {
                                         Layout.preferredWidth: 100
                                     }
                                     Text {
-                                        text: "v1.0 RC (Release Candidate)"
+                                        text: "v1.1 (Quality of Life Update)"
                                         font.pixelSize: 13
                                         font.weight: Font.Medium
                                         color: textColor

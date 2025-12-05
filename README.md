@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <em>Status: v1.0 Release Candidate</em>
+  <em>Status: v1.1 - Quality of Life Update</em>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
-  <img src="https://img.shields.io/badge/version-1.0%20RC-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/version-1.1-blue?style=flat-square">
   <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
@@ -163,25 +163,31 @@ After success:
 
 # Testing
 
-> **Note:** CI does not auto-boot ISO. Manual QEMU boot testing is recommended for validation.
+## CI Testing Strategy
 
-## Optional Local Boot Test
+CI focuses on:
+- ✅ ISO build success
+- ✅ Checksum generation
+- ✅ CodeQL security scanning (Python)
+- ✅ Asset validation (themes, icons, wallpapers)
 
-Manual QEMU testing is the recommended way to validate the ISO:
+QEMU boot tests and UI sanity checks are **optional and non-blocking** in CI due to resource constraints. This ensures the workflow stays green when builds succeed.
+
+## Manual QEMU Testing (Recommended)
+
+To validate the ISO boots correctly, run locally:
 
 ```bash
 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
 ```
 
 This will:
-
-1. Boot the ISO with 4GB RAM
-2. Verify desktop session
-3. Save screenshot to:
-   `tests/artifacts/desktop.png`
+1. Boot the ISO with 4GB RAM (configurable via `RAM=` env var)
+2. Verify desktop session starts
+3. Save screenshot to `tests/artifacts/desktop.png`
 4. Exit 0 on success
 
-**Note:** This test is optional in CI due to resource constraints but is valuable for local testing.
+**Note:** Local QEMU testing is the recommended way to fully validate the OS before release.
 
 ## UI Sanity Check
 
@@ -276,7 +282,7 @@ sudo /opt/aetheros/aether-health.sh
 * [x] Calamares installer branding theme
 * [x] Build system with CI/CD pipeline
 
-## v0.2 (Current) ✅
+## v0.2 ✅
 * [x] **Stability & Error Handling**
   - System health check script (`aether-health.sh`)
   - Error logging for UI components
@@ -299,6 +305,29 @@ sudo /opt/aetheros/aether-health.sh
 * [x] **Performance**
   - Tiered ZRAM (75%/50%/25% based on RAM)
   - Power profile switching
+
+## v1.1 (Current) ✅
+* [x] **CI Pipeline Cleanup**
+  - QEMU boot test made non-blocking
+  - Focus on build success, checksums, and security scanning
+  - Manual QEMU testing recommended for validation
+* [x] **Focus Mode / Do Not Disturb**
+  - Toggle in Control Center
+  - Integrates with KDE notification settings
+* [x] **Auto Light/Dark Theme Schedule**
+  - Automatic theme switching based on time of day
+  - Light theme: 7 AM - 7 PM, Dark theme: 7 PM - 7 AM
+  - Systemd timer for automation
+* [x] **System Sound Theme**
+  - Minimal, clean sound theme (Ocean)
+  - Toggle in Control Center
+  - Login, notification, and alert sounds
+* [x] **Aether Quick Actions**
+  - Shell-based menu launcher (kdialog/zenity)
+  - Quick access to Control Center, Health Check, Backups, Updates
+* [x] **New Wallpapers**
+  - Added Aether Waves and Aether Minimal wallpapers
+  - Total of 6 wallpapers available
 
 ## v0.3 (Planned)
 * [ ] Full Calamares slideshow

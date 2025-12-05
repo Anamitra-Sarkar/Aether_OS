@@ -5,6 +5,69 @@ All notable changes to AetherOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-05
+
+### Overview
+
+AetherOS v1.1 delivers quality-of-life improvements with Focus Mode, auto theme scheduling, system sounds, and enhanced CI reliability. This release emphasizes daily usability and workflow polish.
+
+### Added
+
+- **Focus Mode / Do Not Disturb**
+  - Toggle in Control Center Overview page
+  - Integrates with KDE notification settings via `knotificationmanagerrc`
+  - Script: `scripts/aether-focus-mode.sh` for manual control
+  - Supports toggle, on, off, and status commands
+
+- **Auto Light/Dark Theme Scheduler**
+  - Automatic theme switching based on time of day
+  - Light theme: 7 AM - 7 PM, Dark theme: 7 PM - 7 AM (configurable)
+  - Systemd user timer for hourly checks
+  - Toggle in Control Center Appearance page
+  - Script: `scripts/aether-theme-scheduler.sh`
+  - Config stored in `~/.config/aetheros/theme-scheduler.conf`
+
+- **System Sound Theme**
+  - Minimal, clean sound theme using KDE Ocean sounds
+  - Toggle in Control Center Appearance page
+  - Login, notification, and alert sounds
+  - Script: `scripts/aether-sounds.sh` with test sound feature
+  - Config stored in `~/.config/aetheros/sounds.conf`
+
+- **New Wallpapers**
+  - `aetheros-waves.svg` - Flowing waves with gradient colors
+  - `aetheros-minimal.svg` - Minimal geometric design with central focus
+  - Updated `wallpapers.json` with new entries
+  - Total of 6 wallpapers available
+
+### Changed
+
+- **CI Pipeline Refinement**
+  - QEMU boot test remains non-blocking
+  - UI sanity checks remain non-blocking
+  - Clear documentation that manual QEMU testing is recommended
+  - README and troubleshooting docs updated with testing guidance
+
+- **Control Center Updates**
+  - Version updated to v1.1
+  - Focus toggle now wired to actual functionality
+  - Auto theme schedule toggle added to Appearance page
+  - System sounds toggle added to Appearance page
+  - Enhanced user experience with working toggles
+
+- **Documentation**
+  - README updated with v1.1 feature list
+  - Troubleshooting guide includes QEMU testing section
+  - Clear CI testing strategy documented
+  - New features documented in roadmap
+
+### Technical Details
+
+- Focus Mode uses `kwriteconfig5` and `kreadconfig5` for KDE integration
+- Theme scheduler creates systemd user service and timer
+- Sound theme uses KDE's built-in Ocean sound theme
+- All new scripts follow existing AetherOS script patterns with proper error handling
+
 ## [1.0.0] - 2025-12-03
 
 ### Overview

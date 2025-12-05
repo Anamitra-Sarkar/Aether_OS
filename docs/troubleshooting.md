@@ -6,12 +6,50 @@ This guide helps you resolve common issues with AetherOS.
 
 ## Table of Contents
 
+- [Testing the ISO](#testing-the-iso)
 - [Display & Graphics Issues](#display--graphics-issues)
 - [Desktop Environment Issues](#desktop-environment-issues)
 - [Login Issues](#login-issues)
 - [Performance Issues](#performance-issues)
 - [Network Issues](#network-issues)
 - [Getting Help](#getting-help)
+
+---
+
+## Testing the ISO
+
+### Running QEMU Boot Test Locally
+
+To test if the AetherOS ISO boots correctly before installing:
+
+```bash
+# Basic test (4GB RAM, 120s timeout)
+./tests/boot-qemu.sh build/artifacts/aetheros.iso
+
+# Custom configuration
+RAM=8192 TIMEOUT=180 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
+```
+
+The test will:
+1. Start QEMU with the ISO
+2. Wait for the desktop to become ready
+3. Capture a screenshot to `tests/artifacts/desktop.png`
+4. Exit with status 0 on success
+
+### Expected Behavior on First Boot
+
+When booting AetherOS for the first time:
+
+1. **GRUB menu** appears (5-second timeout)
+2. **Plymouth splash screen** with AetherOS branding
+3. **SDDM login screen** appears (usually within 30-60 seconds)
+4. **Desktop loads** after login (KDE Plasma with Aether theme)
+5. **First-run wizard** launches automatically
+
+If the system hangs or doesn't reach the login screen within 3 minutes, check:
+- System logs: `journalctl -xe`
+- GPU compatibility (try `nomodeset` boot parameter)
+- Sufficient RAM (minimum 2GB, recommended 4GB+)
 
 ---
 
