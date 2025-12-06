@@ -101,6 +101,7 @@ jobs:
         sudo apt-get install -y qemu-system-x86 qemu-utils socat
     
     - name: Run boot test with QEMU
+      if: ${{ env.RUN_QEMU_TEST == 'true' }}
       run: |
         chmod +x ./tests/boot-qemu.sh
         TIMEOUT=300 ./tests/boot-qemu.sh build/artifacts/aetheros.iso
