@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="3840" height="2160" viewBox="0 0 3840 2160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F1720;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a2332;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0F1720;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wave1Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6C8CFF;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#7AE7C7;stop-opacity:0.3" />
+    </linearGradient>
+    <linearGradient id="wave2Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7AE7C7;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#6C8CFF;stop-opacity:0.2" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="3840" height="2160" fill="url(#waveGradient)"/>
+  
+  <!-- Wave 1 -->
+  <path d="M 0 1400 Q 960 1200 1920 1400 T 3840 1400 L 3840 2160 L 0 2160 Z" 
+        fill="url(#wave1Gradient)" opacity="0.5"/>
+  
+  <!-- Wave 2 -->
+  <path d="M 0 1600 Q 960 1500 1920 1600 T 3840 1600 L 3840 2160 L 0 2160 Z" 
+        fill="url(#wave2Gradient)" opacity="0.4"/>
+  
+  <!-- Wave 3 -->
+  <path d="M 0 1800 Q 960 1700 1920 1800 T 3840 1800 L 3840 2160 L 0 2160 Z" 
+        fill="#6C8CFF" opacity="0.1"/>
+  
+  <!-- Accent glow -->
+  <circle cx="1920" cy="1080" r="400" fill="#7AE7C7" opacity="0.05"/>
+</svg>

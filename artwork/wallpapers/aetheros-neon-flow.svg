@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="3840" height="2160" viewBox="0 0 3840 2160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0f18;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0F1720;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0f18;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="neonBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C8CFF;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#4a6fff;stop-opacity:0.6" />
+    </linearGradient>
+    <linearGradient id="neonMint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7AE7C7;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#5ac7a7;stop-opacity:0.6" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="15" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="3840" height="2160" fill="url(#bgGradient)"/>
+  
+  <!-- Neon flow curves -->
+  <path d="M 0 800 Q 960 600 1920 800 T 3840 800" 
+        stroke="url(#neonBlue)" stroke-width="4" fill="none" filter="url(#glow)"/>
+  
+  <path d="M 0 1000 Q 960 1200 1920 1000 T 3840 1000" 
+        stroke="url(#neonMint)" stroke-width="4" fill="none" filter="url(#glow)"/>
+  
+  <path d="M 0 1400 Q 960 1200 1920 1400 T 3840 1400" 
+        stroke="url(#neonBlue)" stroke-width="3" fill="none" filter="url(#glow)" opacity="0.6"/>
+  
+  <!-- Accent dots -->
+  <circle cx="1920" cy="800" r="8" fill="#6C8CFF" filter="url(#glow)"/>
+  <circle cx="960" cy="1000" r="6" fill="#7AE7C7" filter="url(#glow)"/>
+  <circle cx="2880" cy="1000" r="6" fill="#7AE7C7" filter="url(#glow)"/>
+</svg>
