@@ -16,7 +16,11 @@ has_bluetooth() {
 }
 
 has_printer() {
-    lpstat -r &>/dev/null || [ -d /dev/usb/lp* ] 2>/dev/null
+    # Check if CUPS is aware of any printers
+    lpstat -r &>/dev/null && return 0
+    # Check for USB printer devices
+    [ -n "$(find /dev/usb/ -name 'lp*' 2>/dev/null)" ] && return 0
+    return 1
 }
 
 has_avahi_need() {
