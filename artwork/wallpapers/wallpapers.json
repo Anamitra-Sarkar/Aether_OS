@@ -41,6 +41,27 @@
       "description": "Minimal geometric design with central focus - v1.1 addition",
       "mode": "dark",
       "default": false
+    },
+    {
+      "name": "aetheros-waves-dark",
+      "file": "aetheros-waves-dark.svg",
+      "description": "Deep flowing waves with blue-mint gradient - v2.0 Ultimate Edition",
+      "mode": "dark",
+      "default": false
+    },
+    {
+      "name": "aetheros-neon-flow",
+      "file": "aetheros-neon-flow.svg",
+      "description": "Neon flow design with Aether Blue and Mint accents - v2.0 Ultimate Edition",
+      "mode": "dark",
+      "default": false
+    },
+    {
+      "name": "aetheros-gradient-minimal",
+      "file": "aetheros-gradient-minimal.svg",
+      "description": "Ultra minimal gradient with Aether color palette - v2.0 Ultimate Edition",
+      "mode": "both",
+      "default": false
     }
   ],
   "installation": {

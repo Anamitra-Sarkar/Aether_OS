@@ -11,7 +11,7 @@ set -euo pipefail
 # =============================================================================
 ZRAM_SIZE_PERCENT=25
 ZRAM_DEVICE="/dev/zram0"
-ZRAM_ALGORITHM="zstd"
+ZRAM_ALGORITHM="lz4"  # Fastest compression algorithm
 
 # =============================================================================
 # Logging
@@ -45,20 +45,20 @@ calculate_zram_size() {
     local zram_size_mb
     local zram_percent
     
-    # Tiered ZRAM sizing based on RAM amount
-    # <= 4GB: 75% of RAM (maximize swap for low-memory systems)
-    # 4-8GB: 50% of RAM (balanced approach)
-    # > 8GB: 25% of RAM (less needed, avoid wasting compression overhead)
+    # Tiered ZRAM sizing based on RAM amount (v2.0)
+    # <= 4GB: 33% of RAM (conservative for very low memory)
+    # 4-6GB: 50% of RAM (balanced approach for mid-range)
+    # >= 8GB: 75% of RAM (maximize benefit for high RAM systems)
     
     if [[ $total_ram_mb -le 4096 ]]; then
-        zram_percent=75
-        log "Low memory system (${total_ram_mb}MB), using 75% for zram"
-    elif [[ $total_ram_mb -le 8192 ]]; then
+        zram_percent=33
+        log "Low memory system (${total_ram_mb}MB), using 33% for zram"
+    elif [[ $total_ram_mb -le 6144 ]]; then
         zram_percent=50
-        log "Medium memory system (${total_ram_mb}MB), using 50% for zram"
+        log "Mid memory system (${total_ram_mb}MB), using 50% for zram"
     else
-        zram_percent=25
-        log "High memory system (${total_ram_mb}MB), using 25% for zram"
+        zram_percent=75
+        log "High memory system (${total_ram_mb}MB), using 75% for zram"
     fi
     
     zram_size_mb=$((total_ram_mb * zram_percent / 100))

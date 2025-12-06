@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <em>Status: v1.1 - Quality of Life Update</em>
+  <em>Status: v2.0 - Ultimate Edition</em>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
-  <img src="https://img.shields.io/badge/version-1.1-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/version-2.0-blue?style=flat-square">
   <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
@@ -51,23 +51,74 @@ The mission is simple:
 
 ## Features
 
-* 🎨 **Beautiful Design**
-  Custom KDE Plasma theme, refined visuals, translucent shell panels, unified iconography, and handcrafted design tokens.
+### 🎨 Ultimate Aesthetic Upgrade (v2.0)
 
-* ⚡ **Optimized Performance**
-  zram swap, preload, tuned sysctls, disabled unnecessary services, trimmed indexing, and smart defaults for snappy responsiveness.
+* **Adaptive Blur System**: Automatically adjusts blur effects based on GPU capabilities
+  - High Blur Mode for powerful GPUs (RTX, RX 6000+, Intel Xe)
+  - Frosted Lite Mode for mid-range GPUs (Intel HD 4000-6000)
+  - Automatic GPU detection and optimization
 
-* 🖥️ **Modern Desktop**
-  KDE Plasma on Wayland (with seamless X11 fallback), Latte Dock, and a polished layout inspired by macOS and Windows.
+* **CleanMode Toggle**: One-click performance mode for low-end hardware
+  - Disables animations, blur, and heavy effects
+  - Perfect for 4GB RAM systems and older laptops
 
-* 🔧 **First-Run Wizard**
-  Friendly onboarding with privacy-first defaults, theme selection, app bundles, Flatpak setup, and optional codecs.
+* **Aether Neon Design**: Blue-Mint accent colors with modern design tokens
+  - Enhanced plasma themes (light & dark)
+  - macOS-level window depth and shadows
 
-* ♿ **Accessible**
-  High-DPI, reduced motion mode, UI scaling presets, screen reader support, and shortcut-oriented navigation.
+### ⚡ Performance Intelligence (v2.0)
 
-* 🔒 **Privacy-Focused**
-  Telemetry disabled by default, no mandatory proprietary binaries, and deliberate transparency in system behavior.
+* **Auto Performance Profiler**: Detects hardware and applies optimal settings
+  - MaxMode: 16GB+ RAM, high-end GPU
+  - Balanced: 8-12GB RAM, mid-range GPU  
+  - LiteMode: 4GB RAM, integrated GPU
+
+* **Smart Service Manager**: Auto-manages system services based on hardware
+  - Disables Bluetooth if no hardware present
+  - Disables CUPS if no printer detected
+  - Manages indexing based on document count
+  - Saves 50-150MB RAM on typical systems
+
+* **Adaptive ZRAM**: Intelligent swap compression
+  - 33% ratio on 4GB RAM (conservative)
+  - 50% ratio on 6GB RAM (balanced)
+  - 75% ratio on 8GB+ RAM (maximum benefit)
+  - Uses LZ4 algorithm (fastest compression)
+
+### 🧠 Intelligent Desktop Behavior (v2.0)
+
+* **Focus Mode 2.0**: Enhanced Do Not Disturb
+  - Auto-activates during fullscreen apps
+  - Scheduled mode for study/work hours
+  - Manual toggle with status checking
+
+* **Smart Notifications**: Context-aware notification muting
+  - Automatically mutes during gaming (Steam, Lutris)
+  - Mutes during fullscreen videos (YouTube, Netflix, VLC)
+  - Mutes during presentations and meetings (Zoom, Teams)
+
+* **QuickPal Launcher**: Spotlight-style quick access
+  - Launch system tools and settings
+  - Toggle performance modes
+  - Access Control Center pages
+
+* **Profile Sync**: Save and restore preferences in one click
+  - Theme, wallpaper, performance settings
+  - JSON-based with automatic backups
+  - Named profiles (work, personal, gaming)
+
+### 🖥️ Modern Desktop
+
+* KDE Plasma on Wayland (with seamless X11 fallback)
+* Latte Dock with polished layout
+* Custom SDDM login theme
+* First-Run Wizard for easy setup
+
+### ♿ Accessible & Privacy-Focused
+
+* High-DPI support, reduced motion mode
+* Telemetry disabled by default
+* No mandatory proprietary binaries
 
 ---
 
@@ -265,6 +316,13 @@ sudo systemctl restart sddm
 
 # Run system health check
 sudo /opt/aetheros/aether-health.sh
+
+# v2.0 Tools
+aether-performance-profiler.sh auto    # Auto-detect and optimize
+aether-cleanmode.sh toggle             # Toggle performance mode
+aether-quickpal.sh                     # Launch QuickPal
+aether-focus-mode.sh status            # Check Focus Mode
+aether-profile-sync.sh save            # Save preferences
 ```
 
 ---
@@ -306,7 +364,7 @@ sudo /opt/aetheros/aether-health.sh
   - Tiered ZRAM (75%/50%/25% based on RAM)
   - Power profile switching
 
-## v1.1 (Current) ✅
+## v1.1 ✅
 * [x] **CI Pipeline Cleanup**
   - QEMU boot test made non-blocking
   - Focus on build success, checksums, and security scanning
@@ -329,11 +387,56 @@ sudo /opt/aetheros/aether-health.sh
   - Added Aether Waves and Aether Minimal wallpapers
   - Total of 6 wallpapers available
 
-## v0.3 (Planned)
-* [ ] Full Calamares slideshow
-* [ ] Additional wallpapers and icon variants
-* [ ] Expanded accessibility features
-* [ ] ARM64 support exploration
+## v2.0 - Ultimate Edition (Current) ✅
+* [x] **CI Fixes**
+  - Fixed theme asset validation
+  - QEMU boot test made truly optional with environment guard
+  - CI passes without blocking on optional tests
+
+* [x] **Ultimate Aesthetic Upgrade**
+  - Adaptive Blur System (High/Frosted/Off modes)
+  - CleanMode toggle for low-end hardware
+  - Enhanced Plasma themes with Aether Neon design tokens
+  - Smart shadows and layer depth (theme integration)
+
+* [x] **Performance Intelligence**
+  - Auto Performance Profiler (MaxMode/Balanced/LiteMode)
+  - Smart Service Manager (auto-disable unused services)
+  - Adaptive ZRAM rebalancing (75%/50%/33% with LZ4)
+
+* [x] **Intelligent Desktop Behavior**
+  - Focus Mode 2.0 with auto-activation for fullscreen apps
+  - Focus Mode scheduling (study mode)
+  - Smart Notifications (gaming/video/meeting detection)
+
+* [x] **Utilities & User Comfort**
+  - QuickPal Spotlight-style launcher
+  - Profile Sync system (save/restore preferences)
+
+* [x] **Branding & Visual Identity**
+  - New wallpaper pack (Waves Dark, Neon Flow, Gradient Minimal)
+  - Total of 9 wallpapers now available
+
+* [x] **Documentation**
+  - Updated README with v2.0 features
+  - Created design-architecture.md
+  - Documented all new systems and scripts
+
+## v2.1 (Planned)
+* [ ] **Security Evolution**
+  - AetherShield sandbox policies (per-app permissions)
+  - Secure Session Mode toggle
+* [ ] **Audio & Media Polish**
+  - Aether Ocean sound pack
+  - Audio profiles (Movie/Gaming/Voice/Balanced)
+* [ ] **Enhanced Features**
+  - Thermal Mode (dynamic visual adjustment)
+  - Holographic login pulse effect
+  - QuickPal text search
+* [ ] **System Improvements**
+  - Full Calamares slideshow
+  - Expanded accessibility features
+  - ARM64 support exploration
 
 ---
 

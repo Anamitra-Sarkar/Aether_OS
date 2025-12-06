@@ -1,0 +1,28 @@
+[Desktop Entry]
+Name=Aether Light
+Comment=A clean, modern light theme for AetherOS with adaptive performance
+Encoding=UTF-8
+Keywords=Desktop;Workspace;Appearance;Look and Feel;Logout;Lock;Suspend;Shutdown;Switcher;
+Type=Service
+
+X-KDE-ServiceTypes=Plasma/Theme
+X-KDE-PluginInfo-Author=AetherOS Team
+X-KDE-PluginInfo-Email=contact@aetheros.org
+X-KDE-PluginInfo-Name=aether-light
+X-KDE-PluginInfo-Version=2.0
+X-KDE-PluginInfo-Website=https://github.com/Anamitra-Sarkar/Aether_OS
+X-KDE-PluginInfo-Category=Plasma Theme
+X-KDE-PluginInfo-License=Apache-2.0
+X-KDE-PluginInfo-EnabledByDefault=true
+
+X-Plasma-API=5.0
+X-KPackage-Dependencies=
+
+[ContrastEffect]
+enabled=true
+contrast=0.2
+intensity=0.5
+saturation=1.7
+
+[AdaptiveTransparency]
+enabled=true
