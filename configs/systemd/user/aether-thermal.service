@@ -1,0 +1,21 @@
+[Unit]
+Description=AetherOS Thermal Monitoring Service
+Documentation=file:///usr/share/doc/aetheros/thermal-watch.md
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/aetheros/aether-thermal-watch.sh monitor
+Restart=on-failure
+RestartSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

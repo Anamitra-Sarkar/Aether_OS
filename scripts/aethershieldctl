@@ -1,0 +1,430 @@
+#!/bin/bash
+# =============================================================================
+# AetherShield Control - Per-App Sandbox Policy Manager
+# Phase 1: Policy description + partial enforcement + CLI
+# =============================================================================
+
+set -euo pipefail
+
+# =============================================================================
+# Configuration
+# =============================================================================
+SYSTEM_POLICY_DIR="/etc/aetheros/security/apps"
+USER_POLICY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/aetheros/security/apps"
+STATE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/aetheros/security"
+LOG_FILE="$STATE_DIR/aethershield.log"
+
+# Fallback to repo config for development/testing
+if [ ! -d "$SYSTEM_POLICY_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+    SYSTEM_POLICY_DIR="$REPO_ROOT/configs/aetheros/security/apps"
+fi
+
+# =============================================================================
+# Logging
+# =============================================================================
+setup_logging() {
+    mkdir -p "$STATE_DIR"
+    touch "$LOG_FILE"
+}
+
+log_message() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log_error() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" | tee -a "$LOG_FILE" >&2
+}
+
+# =============================================================================
+# Policy Loading
+# =============================================================================
+load_policy() {
+    local app_id="$1"
+    local policy_file=""
+    
+    # Check user policy first, then system policy
+    if [ -f "$USER_POLICY_DIR/${app_id}.json" ]; then
+        policy_file="$USER_POLICY_DIR/${app_id}.json"
+    elif [ -f "$SYSTEM_POLICY_DIR/${app_id}.json" ]; then
+        policy_file="$SYSTEM_POLICY_DIR/${app_id}.json"
+    else
+        return 1
+    fi
+    
+    if ! command -v jq &>/dev/null; then
+        # Fallback: simple grep-based parsing
+        cat "$policy_file"
+        return 0
+    fi
+    
+    # Validate JSON and return
+    if jq empty "$policy_file" 2>/dev/null; then
+        cat "$policy_file"
+        return 0
+    else
+        log_error "Invalid JSON in policy file: $policy_file"
+        return 1
+    fi
+}
+
+# =============================================================================
+# List all policies
+# =============================================================================
+list_policies() {
+    echo "=== AetherShield Managed Applications ==="
+    echo ""
+    
+    local found=0
+    
+    # List system policies
+    if [ -d "$SYSTEM_POLICY_DIR" ]; then
+        for policy_file in "$SYSTEM_POLICY_DIR"/*.json; do
+            if [ -f "$policy_file" ]; then
+                local app_id
+                app_id=$(basename "$policy_file" .json)
+                
+                # Get app name if jq available
+                if command -v jq &>/dev/null; then
+                    local app_name
+                    app_name=$(jq -r '.name // .id' "$policy_file" 2>/dev/null || echo "$app_id")
+                    echo "  • $app_name ($app_id)"
+                else
+                    echo "  • $app_id"
+                fi
+                
+                found=1
+            fi
+        done
+    fi
+    
+    # List user policies
+    if [ -d "$USER_POLICY_DIR" ]; then
+        for policy_file in "$USER_POLICY_DIR"/*.json; do
+            if [ -f "$policy_file" ]; then
+                local app_id
+                app_id=$(basename "$policy_file" .json)
+                
+                # Skip if already shown from system
+                if [ -f "$SYSTEM_POLICY_DIR/${app_id}.json" ]; then
+                    continue
+                fi
+                
+                if command -v jq &>/dev/null; then
+                    local app_name
+                    app_name=$(jq -r '.name // .id' "$policy_file" 2>/dev/null || echo "$app_id")
+                    echo "  • $app_name ($app_id) [user]"
+                else
+                    echo "  • $app_id [user]"
+                fi
+                
+                found=1
+            fi
+        done
+    fi
+    
+    if [ $found -eq 0 ]; then
+        echo "  No policies found"
+        echo ""
+        echo "Hint: Policies are stored in:"
+        echo "  System: $SYSTEM_POLICY_DIR"
+        echo "  User:   $USER_POLICY_DIR"
+    fi
+    
+    echo ""
+}
+
+# =============================================================================
+# Show policy details
+# =============================================================================
+show_policy() {
+    local app_id="$1"
+    
+    echo "=== AetherShield Policy: $app_id ==="
+    echo ""
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        log_error "Policy not found for: $app_id"
+        echo "Policy file not found for: $app_id"
+        return 1
+    fi
+    
+    if command -v jq &>/dev/null; then
+        # Pretty print with jq
+        local name network camera microphone filesystem
+        name=$(echo "$policy" | jq -r '.name // .id')
+        network=$(echo "$policy" | jq -r '.network // "unknown"')
+        camera=$(echo "$policy" | jq -r '.camera // "unknown"')
+        microphone=$(echo "$policy" | jq -r '.microphone // "unknown"')
+        filesystem=$(echo "$policy" | jq -r '.filesystem // "unknown"')
+        
+        echo "Application: $name"
+        echo ""
+        echo "Permissions:"
+        echo "  Network:     $network"
+        echo "  Camera:      $camera"
+        echo "  Microphone:  $microphone"
+        echo "  Filesystem:  $filesystem"
+        echo ""
+        
+        # Show detailed permissions if available
+        if echo "$policy" | jq -e '.permissions' >/dev/null 2>&1; then
+            echo "Detailed Permissions:"
+            echo "$policy" | jq -r '.permissions | to_entries[] | "  \(.key): \(.value.enabled) - \(.value.description)"'
+            echo ""
+        fi
+        
+        # Show integration info
+        local apparmor_profile flatpak_app_id
+        apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
+        flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+        
+        echo "Integration:"
+        echo "  AppArmor Profile: $apparmor_profile"
+        echo "  Flatpak App ID:   $flatpak_app_id"
+    else
+        # Fallback: just show raw JSON
+        echo "$policy"
+    fi
+    
+    echo ""
+}
+
+# =============================================================================
+# Apply policy (Phase 1: partial enforcement)
+# =============================================================================
+apply_policy() {
+    local app_id="$1"
+    
+    echo "=== Applying AetherShield Policy: $app_id ==="
+    echo ""
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        log_error "Cannot apply - policy not found for: $app_id"
+        return 1
+    fi
+    
+    log_message "Applying policy for: $app_id"
+    
+    # Phase 1: Partial enforcement
+    # We'll check what we can do and report
+    
+    local applied=0
+    
+    # Check if Flatpak app
+    if command -v jq &>/dev/null; then
+        local flatpak_app_id
+        flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+        
+        if [ "$flatpak_app_id" != "none" ] && command -v flatpak &>/dev/null; then
+            echo "Checking Flatpak app: $flatpak_app_id"
+            
+            if flatpak list --app | grep -q "$flatpak_app_id"; then
+                echo "  ✓ Flatpak app found"
+                
+                # Apply Flatpak permissions
+                local network camera microphone filesystem
+                network=$(echo "$policy" | jq -r '.network')
+                camera=$(echo "$policy" | jq -r '.camera')
+                microphone=$(echo "$policy" | jq -r '.microphone')
+                filesystem=$(echo "$policy" | jq -r '.filesystem')
+                
+                # Network permission
+                if [ "$network" = "false" ]; then
+                    echo "  → Would restrict network access (flatpak override --user --unshare=network)"
+                    # Commented out for Phase 1 - not breaking anything
+                    # flatpak override --user --unshare=network "$flatpak_app_id" 2>/dev/null || true
+                fi
+                
+                # Camera/Microphone
+                if [ "$camera" = "false" ]; then
+                    echo "  → Would disable camera access"
+                fi
+                if [ "$microphone" = "false" ]; then
+                    echo "  → Would disable microphone access"
+                fi
+                
+                applied=1
+            else
+                echo "  ℹ Flatpak app not installed"
+            fi
+        fi
+        
+        # Check AppArmor profile
+        local apparmor_profile
+        apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
+        
+        if [ "$apparmor_profile" != "none" ] && command -v aa-status &>/dev/null; then
+            if [ -f "$apparmor_profile" ]; then
+                echo "AppArmor profile: $apparmor_profile"
+                echo "  → Would load AppArmor profile (requires root)"
+                # Commented out for Phase 1
+                # sudo apparmor_parser -r "$apparmor_profile" 2>/dev/null || true
+                applied=1
+            else
+                echo "  ℹ AppArmor profile not found: $apparmor_profile"
+            fi
+        fi
+    fi
+    
+    if [ $applied -eq 0 ]; then
+        echo "ℹ Policy loaded but no enforcement applied (Phase 1)"
+        echo "  This is normal - Phase 1 focuses on policy awareness"
+        echo "  Full enforcement will come in future phases"
+    fi
+    
+    log_message "Policy application completed for: $app_id"
+    echo ""
+    echo "✓ Policy processing complete"
+    echo ""
+}
+
+# =============================================================================
+# Check status
+# =============================================================================
+check_status() {
+    local app_id="$1"
+    
+    echo "=== AetherShield Status: $app_id ==="
+    echo ""
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        echo "Status: No policy configured"
+        return 1
+    fi
+    
+    echo "Status: Policy configured"
+    
+    if command -v jq &>/dev/null; then
+        local flatpak_app_id
+        flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+        
+        if [ "$flatpak_app_id" != "none" ] && command -v flatpak &>/dev/null; then
+            if flatpak list --app | grep -q "$flatpak_app_id"; then
+                echo "Flatpak:    Installed"
+                
+                # Check current overrides
+                if flatpak override --user --show "$flatpak_app_id" 2>/dev/null | grep -q "unshare=network"; then
+                    echo "Network:    Restricted"
+                else
+                    echo "Network:    Allowed"
+                fi
+            else
+                echo "Flatpak:    Not installed"
+            fi
+        fi
+        
+        local apparmor_profile
+        apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
+        
+        if [ "$apparmor_profile" != "none" ]; then
+            if [ -f "$apparmor_profile" ]; then
+                echo "AppArmor:   Profile exists"
+                
+                if command -v aa-status &>/dev/null; then
+                    if sudo aa-status 2>/dev/null | grep -q "$(basename "$apparmor_profile")"; then
+                        echo "            Loaded"
+                    else
+                        echo "            Not loaded"
+                    fi
+                fi
+            else
+                echo "AppArmor:   Profile not found"
+            fi
+        fi
+    fi
+    
+    echo ""
+}
+
+# =============================================================================
+# Help
+# =============================================================================
+show_help() {
+    cat << EOF
+AetherShield Control - Per-App Sandbox Policy Manager
+
+Phase 1: Policy description + partial enforcement
+
+Usage: $(basename "$0") COMMAND [OPTIONS]
+
+Commands:
+  list              List all managed applications
+  show APP_ID       Show policy details for an app
+  apply APP_ID      Apply policy for an app
+  status APP_ID     Check enforcement status for an app
+  help              Show this help
+
+Examples:
+  $(basename "$0") list
+  $(basename "$0") show firefox
+  $(basename "$0") apply firefox
+  $(basename "$0") status firefox
+
+Policy Files:
+  System: $SYSTEM_POLICY_DIR
+  User:   $USER_POLICY_DIR
+
+Logs:
+  $LOG_FILE
+
+Phase 1 Notes:
+  - Policies are opt-in and won't break apps by default
+  - Focus is on policy awareness and CLI functionality
+  - Full automatic enforcement coming in future phases
+  - Integration with AppArmor and Flatpak where available
+
+EOF
+}
+
+# =============================================================================
+# Main
+# =============================================================================
+main() {
+    setup_logging
+    
+    case "${1:-help}" in
+        list)
+            list_policies
+            ;;
+        show)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") show APP_ID" >&2
+                exit 1
+            fi
+            show_policy "$2"
+            ;;
+        apply)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") apply APP_ID" >&2
+                exit 1
+            fi
+            apply_policy "$2"
+            ;;
+        status)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") status APP_ID" >&2
+                exit 1
+            fi
+            check_status "$2"
+            ;;
+        help|--help|-h)
+            show_help
+            ;;
+        *)
+            echo "Error: Unknown command: $1" >&2
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
