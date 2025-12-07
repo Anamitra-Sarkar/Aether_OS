@@ -5,6 +5,148 @@ All notable changes to AetherOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2024-12-07
+
+### Overview
+
+AetherOS v2.1 "Security Evolution" brings AetherOS into smart OS territory with security-first features, thermal intelligence, audio polish, and improved accessibility. This release maintains the lightweight, 4GB-RAM-friendly philosophy while adding sophisticated system intelligence.
+
+### Added - Security Evolution
+
+- **AetherShield - Per-App Sandbox Control** (Phase 1)
+  - Policy-based permission management for applications
+  - JSON manifests for app permissions (network, camera, mic, filesystem)
+  - CLI tool: `aethershieldctl` with list, show, apply, status commands
+  - Integration with AppArmor profiles and Flatpak permissions
+  - Example policy for Firefox included
+  - Documentation: `/etc/aetheros/security/apps/README.md`
+
+- **Secure Session Mode**
+  - Temporary lockdown for banking, exams, sensitive work
+  - Script: `aether-secure-session.sh` with start, stop, status
+  - Enables strict firewall rules (UFW)
+  - Disables SSH, Avahi, Samba services when active
+  - Disables USB automount
+  - Visual notification indicator
+  - All changes reversible and idempotent
+
+### Added - Thermal Intelligence
+
+- **Thermal Watch - Heat-Aware Visuals**
+  - Script: `aether-thermal-watch.sh`
+  - Monitors `/sys/class/thermal` zones
+  - Three states: cool (<60°C), warm (60-75°C), hot (>75°C)
+  - Automatically adjusts visual effects based on temperature
+  - Respects user profile overrides
+  - Systemd user service: `aether-thermal.service`
+  - Minimum 60s between profile changes (anti-thrashing)
+  - Logging to `~/.local/share/aetheros/thermal.log`
+
+### Added - Audio & Media Polish
+
+- **Aether Ocean Sound Pack**
+  - Ocean-inspired sound theme structure
+  - Placeholders for 10 sound events (login, notification, etc.)
+  - KDE Plasma sound theme integration
+  - Documentation: `artwork/sounds/ocean/README.md`
+  - Config: `configs/plasma/aether-ocean-sounds/`
+
+- **Audio Profiles**
+  - Script: `aether-audio-profile.sh`
+  - Four profiles: movie, gaming, voice, balanced
+  - PulseAudio and PipeWire support
+  - Volume optimization per scenario
+  - Microphone boost for voice profile
+  - Graceful fallback when EQ unavailable
+
+### Added - UX Enhancements
+
+- **QuickPal Enhanced Search**
+  - Fuzzy search over .desktop applications
+  - AetherOS tools discovery (aether-*)
+  - System settings and common apps
+  - Optional fzf integration for better UX
+  - Fallback to kdialog/zenity
+  - Updated help documentation
+
+- **Holographic Login Pulse**
+  - Subtle pulsing animation on SDDM login logo
+  - Opacity and scale animations (2s cycle)
+  - Configurable via `/etc/aetheros/login-effects.conf`
+  - Can be disabled for low-end systems
+  - Zero overhead fallback if GPU doesn't support
+
+### Added - Accessibility
+
+- **Accessibility Manager**
+  - Script: `aether-accessibility.sh`
+  - Reduced Motion mode: disables all animations and transitions
+  - High Contrast mode: increases readability
+  - Commands: reduce-motion on/off, high-contrast on/off
+  - Immediate effect with KWin reconfiguration
+  - Comprehensive help and documentation
+
+### Added - Installer Polish
+
+- **Calamares Slideshow**
+  - Five-slide presentation during installation
+  - Showcases v2.1 features (AetherShield, Thermal, etc.)
+  - QML-based with fallback text rendering
+  - Branding config: `configs/calamares/branding/aetheros/`
+  - Placeholder images with documentation
+  - 5-second auto-advance per slide
+
+### Added - ARM64 Groundwork
+
+- **Architecture Support in Build Scripts**
+  - `ARCH` environment variable in `build.sh` and `chroot-setup.sh`
+  - Support for `amd64` (default) and `arm64` (experimental)
+  - `--arch` flag for manual specification
+  - Debootstrap parametrized for architecture
+  - Warning for ARM64 experimental status
+  - Documentation: `docs/arm64-experimental.md`
+
+### Added - Testing & CI
+
+- **Profile Tools Check**
+  - Script: `tests/check-profiles.sh`
+  - Validates all required scripts exist
+  - Checks executable permissions
+  - Verifies shebangs and error handling
+  - Tests basic syntax with bash -n
+  - Checks help commands work
+  - Validates v2.1 config directories
+  - Integrated into CI workflow
+  - 135+ automated checks
+
+### Changed
+
+- Updated README.md to reflect v2.1 features and status
+- Updated version badges and feature lists
+- Enhanced CI workflow with profile tools verification
+- Build scripts now log architecture information
+
+### Technical
+
+- All new scripts follow `set -euo pipefail` pattern
+- Graceful degradation when dependencies missing
+- No-op behavior for missing audio/thermal hardware
+- Idempotent operations (safe to run multiple times)
+- Comprehensive logging for debugging
+- State files in `~/.local/share/aetheros/`
+- Config files in `~/.config/aetheros/`
+
+### Notes
+
+- Phase 1 of AetherShield focuses on policy awareness
+- Full automatic sandboxing coming in future phases
+- ARM64 support is experimental, not production-ready
+- Sound pack placeholders need real audio files
+- Calamares slideshow images are placeholders
+- Control Center integration for new features deferred
+
+---
+
 ## [1.1.0] - 2025-12-05
 
 ### Overview

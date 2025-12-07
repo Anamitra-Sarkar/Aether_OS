@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <em>Status: v2.0 - Ultimate Edition</em>
+  <em>Status: v2.1 - Security Evolution</em>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
-  <img src="https://img.shields.io/badge/version-2.0-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/version-2.1-blue?style=flat-square">
   <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
@@ -97,28 +97,74 @@ The mission is simple:
   - Mutes during fullscreen videos (YouTube, Netflix, VLC)
   - Mutes during presentations and meetings (Zoom, Teams)
 
-* **QuickPal Launcher**: Spotlight-style quick access
+* **QuickPal Launcher**: Spotlight-style quick access (Enhanced in v2.1)
   - Launch system tools and settings
   - Toggle performance modes
   - Access Control Center pages
+  - **NEW**: Fuzzy search across all apps and tools
+  - **NEW**: Optional fzf integration for better UX
 
 * **Profile Sync**: Save and restore preferences in one click
   - Theme, wallpaper, performance settings
   - JSON-based with automatic backups
   - Named profiles (work, personal, gaming)
 
+### 🔒 Security Evolution (v2.1)
+
+* **AetherShield**: Per-app sandbox policy management
+  - Control network, camera, microphone, filesystem access
+  - Integration with AppArmor and Flatpak
+  - CLI tool: `aethershieldctl`
+  - Phase 1: Policy awareness and partial enforcement
+
+* **Secure Session Mode**: Lockdown for sensitive tasks
+  - Strict firewall rules
+  - Disable SSH and network services
+  - Disable USB automount
+  - Visual indicator when active
+  - Perfect for banking, exams, confidential work
+
+* **Thermal Watch**: Heat-aware visual intelligence
+  - Monitors system temperature
+  - Automatically adjusts visual effects
+  - Prevents overheating on weak hardware
+  - Respects user overrides
+
+### 🎵 Audio & Media Polish (v2.1)
+
+* **Aether Ocean Sound Pack**: Calming ocean-inspired sounds
+  - Custom notification sounds
+  - Login/logout audio
+  - Device connect/disconnect feedback
+
+* **Audio Profiles**: Optimized for different scenarios
+  - Movie: Enhanced bass, surround sound
+  - Gaming: High volume, low latency
+  - Voice: Clear speech, boosted microphone
+  - Balanced: Neutral settings
+
 ### 🖥️ Modern Desktop
 
 * KDE Plasma on Wayland (with seamless X11 fallback)
 * Latte Dock with polished layout
-* Custom SDDM login theme
+* **Custom SDDM login theme** with holographic pulse effect (v2.1)
 * First-Run Wizard for easy setup
+* **NEW**: Calamares slideshow during installation
 
-### ♿ Accessible & Privacy-Focused
+### ♿ Accessibility (Enhanced in v2.1)
 
-* High-DPI support, reduced motion mode
+* **Reduced Motion Mode**: One-click animation disabling
+* **High Contrast Mode**: Better readability
+* High-DPI support
+* Keyboard navigation optimized
+* Screen reader compatible
+
+### 🔐 Privacy-Focused
+
 * Telemetry disabled by default
 * No mandatory proprietary binaries
+* Local-first processing
+* No cloud dependencies
 
 ---
 

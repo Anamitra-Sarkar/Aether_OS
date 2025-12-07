@@ -47,7 +47,7 @@ backup_state() {
     
     # Backup firewall rules if using ufw
     if command -v ufw &>/dev/null; then
-        sudo ufw status > "$BACKUP_DIR/ufw-status.txt" 2>/dev/null || true
+        sudo ufw status 2>/dev/null | tee "$BACKUP_DIR/ufw-status.txt" >/dev/null || true
     fi
     
     # Backup systemd services state
@@ -157,7 +157,7 @@ enable_secure_session() {
     
     # 5. Create state file
     echo "active" > "$STATE_FILE"
-    echo "$(date '+%Y-%m-%d %H:%M:%S')" >> "$STATE_FILE"
+    date '+%Y-%m-%d %H:%M:%S' >> "$STATE_FILE"
     
     # 6. Show visual indicator
     show_indicator
@@ -268,17 +268,14 @@ show_status() {
         fi
         
         # Check services
-        local services_stopped=0
         if systemctl is-active --quiet ssh 2>/dev/null || systemctl is-active --quiet sshd 2>/dev/null; then
             :
         else
             echo "  • SSH: Disabled"
-            services_stopped=1
         fi
         
         if ! systemctl is-active --quiet avahi-daemon 2>/dev/null; then
             echo "  • Avahi: Disabled"
-            services_stopped=1
         fi
         
         # Check automount
