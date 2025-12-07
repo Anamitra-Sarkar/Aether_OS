@@ -119,13 +119,57 @@ Rectangle {
             anchors.margins: 40
             spacing: 24
             
-            // Logo
+            // Logo with holographic pulse effect
             Image {
+                id: logoImage
                 Layout.alignment: Qt.AlignHCenter
                 source: "/usr/share/pixmaps/aetheros-logo.svg"
                 sourceSize.width: 80
                 sourceSize.height: 80
                 fillMode: Image.PreserveAspectFit
+                
+                // Holographic pulse animation (can be disabled via config)
+                property bool enablePulse: config.enableLoginPulse !== "false"
+                
+                // Pulsing opacity animation
+                SequentialAnimation on opacity {
+                    running: logoImage.enablePulse
+                    loops: Animation.Infinite
+                    
+                    NumberAnimation {
+                        from: 1.0
+                        to: 0.6
+                        duration: 2000
+                        easing.type: Easing.InOutQuad
+                    }
+                    
+                    NumberAnimation {
+                        from: 0.6
+                        to: 1.0
+                        duration: 2000
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                
+                // Subtle scale pulse
+                SequentialAnimation on scale {
+                    running: logoImage.enablePulse
+                    loops: Animation.Infinite
+                    
+                    NumberAnimation {
+                        from: 1.0
+                        to: 1.05
+                        duration: 2000
+                        easing.type: Easing.InOutQuad
+                    }
+                    
+                    NumberAnimation {
+                        from: 1.05
+                        to: 1.0
+                        duration: 2000
+                        easing.type: Easing.InOutQuad
+                    }
+                }
             }
             
             // Title

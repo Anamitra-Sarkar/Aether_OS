@@ -14,7 +14,11 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 CHROOT_DIR="${CHROOT_DIR:-$SCRIPT_DIR/chroot}"
 UBUNTU_RELEASE="noble"
 UBUNTU_MIRROR="${UBUNTU_MIRROR:-http://archive.ubuntu.com/ubuntu}"
-ARCH="amd64"
+
+# Architecture support (ARM64 groundwork for v2.1)
+ARCH="${ARCH:-amd64}"
+# Supported: amd64 (x86_64), arm64 (aarch64)
+
 PACKAGES_LIST="$SCRIPT_DIR/packages.list"
 LOG_FILE="$SCRIPT_DIR/chroot-setup.log"
 

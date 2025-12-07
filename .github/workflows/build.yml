@@ -149,6 +149,12 @@ jobs:
         
         echo "PASS: All required assets present"
     
+    - name: Verify profile tools
+      run: |
+        echo "Checking profile tools and scripts..."
+        chmod +x ./tests/check-profiles.sh
+        ./tests/check-profiles.sh
+    
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()

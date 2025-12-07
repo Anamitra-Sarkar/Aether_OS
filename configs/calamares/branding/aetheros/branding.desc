@@ -1,0 +1,34 @@
+---
+# AetherOS Calamares Branding Configuration
+componentName: aetheros
+
+### WELCOME / INTRODUCTION
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+
+strings:
+    productName:         "@{NAME}"
+    shortProductName:    AetherOS
+    version:             "@{VERSION}"
+    shortVersion:        2.1
+    versionedName:       "@{NAME} @{VERSION}"
+    shortVersionedName:  "AetherOS 2.1"
+    bootloaderEntryName: AetherOS
+    productUrl:          https://github.com/Anamitra-Sarkar/Aether_OS
+    supportUrl:          https://github.com/Anamitra-Sarkar/Aether_OS/issues
+    knownIssuesUrl:      https://github.com/Anamitra-Sarkar/Aether_OS/issues
+    releaseNotesUrl:     https://github.com/Anamitra-Sarkar/Aether_OS/releases
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "languages.png"
+
+slideshow:              "show.qml"
+
+### STYLES
+style:
+   SidebarBackground:    "#2a3440"
+   SidebarText:          "#ffffff"
+   SidebarTextSelect:    "#6cc8ff"
+   SidebarTextHighlight: "#4db8e8"
