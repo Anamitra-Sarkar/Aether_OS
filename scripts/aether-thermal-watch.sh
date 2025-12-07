@@ -85,8 +85,13 @@ read_temperatures() {
         local sensor_temp
         sensor_temp=$(sensors 2>/dev/null | grep -oP 'Core 0.*?\+\K[0-9.]+' | head -1 || echo "0")
         if [ -n "$sensor_temp" ] && [ "$sensor_temp" != "0" ]; then
-            # Convert to millidegrees
-            max_temp=$(echo "$sensor_temp * 1000" | bc -l 2>/dev/null | cut -d. -f1)
+            # Convert to millidegrees (use bc if available, else skip)
+            if command -v bc &>/dev/null; then
+                max_temp=$(echo "$sensor_temp * 1000" | bc -l 2>/dev/null | cut -d. -f1)
+            else
+                # Simple integer conversion if bc not available
+                max_temp=$(printf "%.0f" "$(echo "$sensor_temp" | cut -d. -f1)000" 2>/dev/null || echo "0")
+            fi
         fi
     fi
     
@@ -223,9 +228,11 @@ apply_thermal_profile() {
             # Optionally switch to lite profile if profiler available
             # But only if user hasn't explicitly set a profile
             if [ -n "$profiler_script" ] && [ -f "$profiler_script" ]; then
-                # Check if there's a user override
-                local profile_file="$CONFIG_DIR/.aether-performance-profile"
-                if [ ! -f "$profile_file" ] || [ ! -f "$CONFIG_DIR/.aether-profile-user-override" ]; then
+                # Check if there's a user override file
+                # User can create this file to prevent automatic profile changes
+                local override_file="$CONFIG_DIR/.aether-profile-user-override"
+                
+                if [ ! -f "$override_file" ]; then
                     log_message "Switching to Lite profile due to heat"
                     "$profiler_script" lite 2>/dev/null || true
                 else

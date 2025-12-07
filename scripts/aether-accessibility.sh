@@ -254,6 +254,7 @@ EOF
 # =============================================================================
 main() {
     mkdir -p "$STATE_DIR"
+    mkdir -p "$CONFIG_DIR"
     
     case "${1:-status}" in
         reduce-motion|reduced-motion)

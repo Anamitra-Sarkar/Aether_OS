@@ -234,17 +234,19 @@ apply_policy() {
                 
                 # Network permission
                 if [ "$network" = "false" ]; then
-                    echo "  → Would restrict network access (flatpak override --user --unshare=network)"
-                    # Commented out for Phase 1 - not breaking anything
-                    # flatpak override --user --unshare=network "$flatpak_app_id" 2>/dev/null || true
+                    echo "  → Would restrict network access"
+                    echo "     (Phase 1: Policy awareness only)"
+                    # TODO Phase 2: flatpak override --user --unshare=network "$flatpak_app_id"
                 fi
                 
                 # Camera/Microphone
                 if [ "$camera" = "false" ]; then
                     echo "  → Would disable camera access"
+                    echo "     (Phase 1: Policy awareness only)"
                 fi
                 if [ "$microphone" = "false" ]; then
                     echo "  → Would disable microphone access"
+                    echo "     (Phase 1: Policy awareness only)"
                 fi
                 
                 applied=1

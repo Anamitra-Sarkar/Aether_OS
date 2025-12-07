@@ -73,11 +73,11 @@ case "$ARCH" in
         ;;
     arm64|aarch64)
         ARCH="arm64"
-        echo "WARNING: ARM64 support is experimental and not fully tested"
+        log "WARNING: ARM64 support is experimental and not fully tested"
         ;;
     *)
-        echo "Error: Unsupported architecture: $ARCH" >&2
-        echo "Supported: amd64, arm64" >&2
+        log_error "Unsupported architecture: $ARCH"
+        log_error "Supported: amd64, arm64"
         exit 1
         ;;
 esac

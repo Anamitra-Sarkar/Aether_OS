@@ -79,7 +79,7 @@ enable_secure_session() {
         # Enable UFW if not already enabled
         if ! sudo ufw status | grep -q "Status: active"; then
             echo "  Enabling UFW..."
-            echo "y" | sudo ufw enable 2>/dev/null || true
+            sudo ufw --force enable 2>/dev/null || true
         fi
         
         # Deny all incoming by default

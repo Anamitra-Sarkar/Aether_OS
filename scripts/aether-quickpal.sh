@@ -277,8 +277,10 @@ search_mode() {
     
     # Add .desktop apps
     while IFS='|' read -r app_name desktop_file; do
-        if [ -n "$app_name" ]; then
-            search_items["App: $app_name"]="gtk-launch $(basename "$desktop_file" .desktop)"
+        if [ -n "$app_name" ] && [ -n "$desktop_file" ]; then
+            local desktop_id
+            desktop_id=$(basename "$desktop_file" .desktop)
+            search_items["App: $app_name"]="gtk-launch $desktop_id"
         fi
     done < <(discover_desktop_apps)
     
