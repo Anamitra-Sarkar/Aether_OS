@@ -19,6 +19,11 @@ ISO_LABEL="AetherOS"
 LOG_FILE="$SCRIPT_DIR/build.log"
 MINIMAL_MODE=false
 
+# Architecture support (ARM64 groundwork for v2.1)
+ARCH="${ARCH:-amd64}"
+# Supported: amd64 (x86_64), arm64 (aarch64)
+# Note: ARM64 support is experimental and not fully tested yet
+
 # =============================================================================
 # Parse Arguments
 # =============================================================================
@@ -32,13 +37,26 @@ while [[ $# -gt 0 ]]; do
             CHROOT_DIR="$2"
             shift 2
             ;;
+        --arch)
+            ARCH="$2"
+            shift 2
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --minimal      Build minimal ISO for testing"
             echo "  --chroot-dir   Specify chroot directory"
+            echo "  --arch ARCH    Target architecture (amd64 or arm64, default: amd64)"
             echo "  --help         Show this help"
+            echo ""
+            echo "Environment Variables:"
+            echo "  ARCH           Set target architecture (amd64 or arm64)"
+            echo ""
+            echo "Examples:"
+            echo "  $0                    # Build for amd64 (default)"
+            echo "  $0 --arch arm64       # Build for ARM64 (experimental)"
+            echo "  ARCH=arm64 $0         # Build for ARM64 via environment"
             exit 0
             ;;
         *)
@@ -47,6 +65,22 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Validate architecture
+case "$ARCH" in
+    amd64|x86_64)
+        ARCH="amd64"
+        ;;
+    arm64|aarch64)
+        ARCH="arm64"
+        log "WARNING: ARM64 support is experimental and not fully tested"
+        ;;
+    *)
+        log_error "Unsupported architecture: $ARCH"
+        log_error "Supported: amd64, arm64"
+        exit 1
+        ;;
+esac
 
 # =============================================================================
 # Logging Functions
@@ -488,6 +522,7 @@ print_summary() {
 main() {
     log_section "AetherOS Build"
     log "Starting at $(date)"
+    log "Architecture: $ARCH"
     log "Minimal mode: $MINIMAL_MODE"
     
     check_prerequisites

@@ -1,0 +1,13 @@
+[Sound Theme]
+Name=Aether Ocean
+Name[en_US]=Aether Ocean
+Comment=Calming ocean-inspired sounds for AetherOS
+Comment[en_US]=Calming ocean-inspired sounds for AetherOS
+Directories=stereo
+Inherits=freedesktop
+Example=stereo/bell.ogg
+Hidden=false
+
+[stereo]
+Context=Actions
+OutputProfile=stereo
