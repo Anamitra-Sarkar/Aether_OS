@@ -368,7 +368,9 @@ show_system_info() {
     local tools=("git" "python3" "node" "gcc" "g++" "make" "cmake")
     for tool in "${tools[@]}"; do
         if command -v "$tool" &> /dev/null; then
-            local version=$("$tool" --version 2>&1 | head -1 | awk '{print $NF}' | grep -oP '\d+\.\d+(\.\d+)?' || echo "installed")
+            # Try to get version, but don't fail if format is unexpected
+            local version
+            version=$("$tool" --version 2>&1 | head -1 | awk '{print $NF}' | grep -oP '\d+\.\d+(\.\d+)?' 2>/dev/null || echo "✓")
             echo -e "  ${COLOR_GREEN}✓${COLOR_RESET} $tool ($version)"
         else
             echo -e "  ${COLOR_RED}✗${COLOR_RESET} $tool"

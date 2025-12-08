@@ -44,7 +44,7 @@ check_script_exists() {
     fi
 }
 
-# Check if script has help option
+# Check if script has help option (non-critical, always passes)
 check_help_option() {
     local script=$1
     local path="scripts/$script"
@@ -54,10 +54,11 @@ check_help_option() {
     fi
     
     # Try to run help (capture output, ignore errors)
+    # This is informational only - we don't fail if help doesn't work
     if "$path" help &> /dev/null || "$path" --help &> /dev/null; then
         return 0
     else
-        # Some scripts might not have help but still exist
+        # Pass anyway - help is optional for some scripts
         return 0
     fi
 }

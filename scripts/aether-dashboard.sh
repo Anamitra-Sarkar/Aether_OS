@@ -76,6 +76,7 @@ get_cpu_usage() {
     local total=$((user + nice + system + idle + iowait + irq + softirq))
     local busy=$((user + nice + system + iowait + irq + softirq))
     
+    # Avoid division by zero
     if [ "$total" -gt 0 ]; then
         local usage=$((busy * 100 / total))
         echo "$usage"

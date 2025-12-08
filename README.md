@@ -515,13 +515,35 @@ aether-accessibility.sh high-contrast on   # Enable high contrast
   - Expanded accessibility features (Reduced Motion, High Contrast)
   - ARM64 support exploration (experimental)
 
-## v2.2 (Planned)
-* [ ] **HyperPolish Wave**
-  - Aether Dashboard (live system overview)
-  - AetherShield GUI integration
-  - Game Mode & Creator Mode profiles
-  - Developer/Minimal Edition presets
-  - Enhanced website + download UX
+## v2.2 - HyperPolish (Current) ✅
+* [x] **System Transparency**
+  - Aether Dashboard (live system overview: CPU, RAM, GPU, thermal)
+  - Real-time monitoring without heavy daemons
+* [x] **Mode Switching**
+  - Game Mode (performance optimization for gaming)
+  - Creator Mode (optimized for content creation)
+  - Easy one-command mode switching
+* [x] **Setup Profiles**
+  - Developer Edition preset (install dev tools)
+  - Minimal Edition preset (remove optional apps)
+  - User-friendly setup experience
+* [x] **Download Experience**
+  - User-friendly download page (website/download.html)
+  - Upload instructions for maintainers
+  - No-cost hosting strategy documented
+* [x] **GUI Enhancements**
+  - AetherShield GUI (basic policy viewer)
+  - kdialog/zenity integration
+
+## v2.3 (Planned)
+* [ ] **Enhanced GUI**
+  - Full AetherShield GUI with policy editing
+  - Thermal monitoring dashboard in Control Center
+  - Audio profile selector GUI
+* [ ] **ARM64 Support**
+  - Complete ARM64 testing and optimization
+  - Raspberry Pi 4/5 support
+  - Touch-friendly interface options
 
 ---
 
