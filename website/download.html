@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Download AetherOS - A beautiful, ultra-smooth, Ubuntu LTS-based desktop distribution">
+    <title>Download AetherOS v2.1 - Security Evolution</title>
+    <style>
+        :root {
+            --primary: #6C8CFF;
+            --secondary: #7AE7C7;
+            --bg-light: #F6F8FA;
+            --bg-dark: #0F1720;
+            --surface-light: #FFFFFF;
+            --surface-dark: #101317;
+            --text-light: #0F1720;
+            --text-dark: #F6F8FA;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: var(--bg-dark);
+                color: var(--text-dark);
+            }
+            
+            .card {
+                background: var(--surface-dark);
+            }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+        }
+        
+        .logo {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto 1rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+        
+        .card {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 1rem 0.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(108, 140, 255, 0.3);
+        }
+        
+        .mirror-btn {
+            background: linear-gradient(135deg, #666, #888);
+        }
+        
+        .requirements {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .req-item {
+            background: rgba(108, 140, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .req-item h3 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        pre {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            padding: 1rem;
+        }
+        
+        .feature h3 {
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .checksum {
+            background: rgba(122, 231, 199, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary);
+            margin: 1rem 0;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            opacity: 0.7;
+            border-top: 1px solid rgba(108, 140, 255, 0.2);
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Download AetherOS</h1>
+            <div class="version-badge">v2.1 - Security Evolution</div>
+            <p class="subtitle">A beautiful, ultra-smooth, privacy-respecting Linux desktop</p>
+        </header>
+        
+        <div class="card">
+            <h2>📥 Latest Release: AetherOS v2.1</h2>
+            <p>Released: December 2024</p>
+            <p>Based on Ubuntu 24.04 LTS with KDE Plasma desktop</p>
+            
+            <div style="margin: 2rem 0;">
+                <a href="https://github.com/Anamitra-Sarkar/Aether_OS/releases/latest" class="download-btn">
+                    ⬇️ Download from GitHub Releases
+                </a>
+            </div>
+            
+            <h3>File Information</h3>
+            <ul>
+                <li><strong>File:</strong> <code>aetheros.iso.xz</code> (compressed ISO)</li>
+                <li><strong>Checksum:</strong> <code>aetheros.iso.xz.sha256</code></li>
+                <li><strong>Size:</strong> ~2.8 GB (compressed), ~3.2 GB (extracted)</li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h2>🔐 Verify Your Download</h2>
+            <p>Always verify the checksum before installation:</p>
+            
+            <pre><code># Extract the compressed ISO
+xz -d aetheros.iso.xz
+
+# Verify the checksum
+sha256sum -c aetheros.iso.xz.sha256</code></pre>
+            
+            <div class="checksum">
+                <strong>⚠️ Security Note:</strong> Always verify checksums to ensure your download hasn't been tampered with.
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>💿 Create Bootable USB</h2>
+            <p>After downloading and verifying, create a bootable USB drive:</p>
+            
+            <h3>Option 1: Using Balena Etcher (Recommended)</h3>
+            <ol>
+                <li>Download <a href="https://www.balena.io/etcher/" target="_blank">Balena Etcher</a></li>
+                <li>Select the <code>aetheros.iso</code> file</li>
+                <li>Select your USB drive</li>
+                <li>Click "Flash!"</li>
+            </ol>
+            
+            <h3>Option 2: Using Ventoy</h3>
+            <ol>
+                <li>Install <a href="https://www.ventoy.net/" target="_blank">Ventoy</a> on your USB drive</li>
+                <li>Copy <code>aetheros.iso</code> to the USB drive</li>
+                <li>Boot from USB and select AetherOS from the menu</li>
+            </ol>
+            
+            <h3>Option 3: Using dd (Linux/macOS)</h3>
+            <pre><code># Replace /dev/sdX with your USB device
+sudo dd if=aetheros.iso of=/dev/sdX bs=4M status=progress
+sudo sync</code></pre>
+        </div>
+        
+        <div class="card">
+            <h2>💻 System Requirements</h2>
+            <div class="requirements">
+                <div class="req-item">
+                    <h3>Minimum</h3>
+                    <ul>
+                        <li>4GB RAM</li>
+                        <li>20GB disk space</li>
+                        <li>Intel HD 3000 or equivalent</li>
+                        <li>x86_64 processor</li>
+                    </ul>
+                </div>
+                <div class="req-item">
+                    <h3>Recommended</h3>
+                    <ul>
+                        <li>8GB+ RAM</li>
+                        <li>30GB+ disk space</li>
+                        <li>Mid-range GPU</li>
+                        <li>SSD storage</li>
+                    </ul>
+                </div>
+                <div class="req-item">
+                    <h3>Optimal</h3>
+                    <ul>
+                        <li>16GB+ RAM</li>
+                        <li>50GB+ disk space</li>
+                        <li>Dedicated GPU</li>
+                        <li>NVMe SSD</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>✨ What's New in v2.1</h2>
+            <div class="features">
+                <div class="feature">
+                    <h3>🔒 Security Evolution</h3>
+                    <ul>
+                        <li>AetherShield per-app policies</li>
+                        <li>Secure Session Mode</li>
+                        <li>Enhanced privacy controls</li>
+                    </ul>
+                </div>
+                <div class="feature">
+                    <h3>🌡️ Thermal Intelligence</h3>
+                    <ul>
+                        <li>Heat-aware visual adjustment</li>
+                        <li>Automatic performance tuning</li>
+                        <li>Prevents overheating</li>
+                    </ul>
+                </div>
+                <div class="feature">
+                    <h3>🎵 Audio Polish</h3>
+                    <ul>
+                        <li>Aether Ocean sound pack</li>
+                        <li>Audio profiles (Gaming/Movie/Voice)</li>
+                        <li>Optimized for scenarios</li>
+                    </ul>
+                </div>
+                <div class="feature">
+                    <h3>♿ Accessibility</h3>
+                    <ul>
+                        <li>Reduced Motion Mode</li>
+                        <li>High Contrast Mode</li>
+                        <li>Screen reader compatible</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🌐 Alternative Download Mirrors</h2>
+            <p>If GitHub is unavailable, try these alternative mirrors:</p>
+            
+            <h3>Archive.org (Coming Soon)</h3>
+            <p>We're working on setting up a mirror on Archive.org for long-term preservation.</p>
+            
+            <h3>SourceForge (Coming Soon)</h3>
+            <p>Additional mirror for wider availability and faster downloads in some regions.</p>
+            
+            <p><em>Note: All mirrors are maintained by the AetherOS team. No paid hosting required!</em></p>
+        </div>
+        
+        <div class="card">
+            <h2>📚 After Installation</h2>
+            <p>Once you've installed AetherOS, check out these resources:</p>
+            <ul>
+                <li><a href="https://github.com/Anamitra-Sarkar/Aether_OS/blob/main/README.md">README & Documentation</a></li>
+                <li><a href="https://github.com/Anamitra-Sarkar/Aether_OS/blob/main/docs/troubleshooting.md">Troubleshooting Guide</a></li>
+                <li><a href="https://github.com/Anamitra-Sarkar/Aether_OS/blob/main/docs/shortcuts.md">Keyboard Shortcuts</a></li>
+                <li><a href="https://github.com/Anamitra-Sarkar/Aether_OS/blob/main/docs/theming-guide.md">Theming Guide</a></li>
+            </ul>
+        </div>
+        
+        <footer>
+            <p>AetherOS is 100% open source • No telemetry • No tracking</p>
+            <p><a href="https://github.com/Anamitra-Sarkar/Aether_OS">GitHub Repository</a> | 
+               <a href="https://github.com/Anamitra-Sarkar/Aether_OS/issues">Report Issues</a></p>
+            <p>Made with ❤️ for everyone who wants a clean, modern, beautiful Linux desktop</p>
+        </footer>
+    </div>
+</body>
+</html>

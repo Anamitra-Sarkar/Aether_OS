@@ -290,20 +290,120 @@ $surface: #101317;      // Dark surface
 - **CleanMode**: Disabled for instant response
 - **High mode**: GPU-accelerated effects
 
-## Security Considerations
+## Security Features (v2.1)
 
-### Planned Features (v2.1)
-- **AetherShield**: Per-app permission system
-  - Camera access
-  - Microphone access
-  - Network access
-  - Storage access
+### AetherShield
+**Script**: `scripts/aethershieldctl`
 
-- **Secure Session Mode**: Enhanced security toggle
-  - USB device blocking
-  - Kernel lockdown mode
-  - Module loading disabled
-  - Private network mode
+Per-app sandbox policy management:
+
+```
+Architecture:
+├── Policy Manifests (JSON)
+│   └── /etc/aetheros/security/apps/
+├── CLI Tool (aethershieldctl)
+│   ├── list - Show all managed apps
+│   ├── show - View app policy
+│   ├── apply - Apply policy restrictions
+│   └── status - Check enforcement status
+└── Backend Integration
+    ├── AppArmor profiles
+    ├── Flatpak permissions
+    └── UFW firewall rules
+```
+
+**Policy Structure**:
+```json
+{
+  "name": "firefox",
+  "network": "allow",
+  "camera": "deny",
+  "microphone": "ask",
+  "filesystem": "home"
+}
+```
+
+**Phase 1 Status**:
+- ✅ Policy awareness
+- ✅ CLI tool
+- ⚠️ Partial enforcement (AppArmor/Flatpak ready)
+- 🔮 Full sandboxing (Phase 2)
+
+### Secure Session Mode
+**Script**: `scripts/aether-secure-session.sh`
+
+Enhanced security toggle for sensitive tasks:
+
+**When Active**:
+- Strict firewall rules (UFW: deny all incoming)
+- SSH server disabled
+- Network services stopped (Avahi, Samba)
+- USB automount disabled
+- Visual notification indicator
+- All changes reversible
+
+**Use Cases**:
+- Online banking
+- Exam portals
+- Confidential work
+- Security-critical tasks
+
+### Thermal Watch
+**Script**: `scripts/aether-thermal-watch.sh`
+
+Heat-aware visual intelligence:
+
+```
+Temperature States:
+├── Cool (<60°C)
+│   └── Full visual effects
+├── Warm (60-75°C)
+│   └── Reduced effects
+└── Hot (>75°C)
+    └── Performance mode (CleanMode)
+```
+
+**Safety Features**:
+- Minimum 60s between changes (anti-thrashing)
+- Respects user profile overrides
+- Automatic restoration when cooling
+- Comprehensive logging
+
+**Systemd Integration**:
+```bash
+systemctl --user enable --now aether-thermal.service
+```
+
+### Audio Profiles (v2.1)
+**Script**: `scripts/aether-audio-profile.sh`
+
+Scenario-optimized audio presets:
+
+| Profile | Bass | Volume | Latency | Microphone |
+|---------|------|--------|---------|------------|
+| Movie | Enhanced | Medium | Normal | Low boost |
+| Gaming | Balanced | High | Low | Normal |
+| Voice | Reduced | Medium | Normal | High boost |
+| Balanced | Neutral | Medium | Normal | Normal |
+
+**Implementation**: PulseAudio/PipeWire configuration
+
+### Accessibility Enhancements (v2.1)
+**Script**: `scripts/aether-accessibility.sh`
+
+Inclusive design features:
+
+**Reduced Motion Mode**:
+- Disables all animations
+- Removes blur effects
+- Simplifies transitions
+- Helpful for vestibular disorders
+
+**High Contrast Mode**:
+- Increases text readability
+- Reduces transparency
+- Better color contrast
+- Low vision support
 
 ## Testing Strategy
 
@@ -331,19 +431,34 @@ $surface: #101317;      // Dark surface
 
 **Note**: QEMU boot tests are optional due to resource constraints. Manual testing recommended for full validation.
 
-## Future Enhancements (v2.1+)
+## Completed in v2.1
 
-### Planned
-1. **Thermal Mode**: Dynamic visual adjustment based on CPU temperature
-2. **Audio Profiles**: Movie, Gaming, Voice, Balanced presets
-3. **Holographic Login**: Animated SDDM logo with GPU fallback
-4. **Enhanced QuickPal**: Full text search, app launching
+1. ✅ **Thermal Watch**: Dynamic visual adjustment based on CPU temperature
+2. ✅ **Audio Profiles**: Movie, Gaming, Voice, Balanced presets
+3. ✅ **Holographic Login**: Animated SDDM logo with pulse effect
+4. ✅ **Enhanced QuickPal**: Fuzzy search, app launching (with optional fzf)
+5. ✅ **AetherShield**: Per-app security policies (Phase 1)
+6. ✅ **Secure Session Mode**: Lockdown for sensitive tasks
+7. ✅ **Accessibility**: Reduced Motion & High Contrast modes
+8. ✅ **Calamares Slideshow**: Installation feature walkthrough
+9. ✅ **Aether Ocean**: Custom sound pack
 
-### Under Consideration
+## Future Enhancements (v2.2+)
+
+### Planned for v2.2
+1. **Aether Dashboard**: Live system overview (CPU, RAM, GPU, thermal)
+2. **AetherShield GUI**: Visual policy management
+3. **Game Mode**: Performance optimization for gaming
+4. **Creator Mode**: Optimized for content creation
+5. **Dev/Minimal Presets**: Easy setup profiles
+6. **Website Enhancement**: Download page and upload docs
+
+### Under Consideration (v2.3+)
 1. **AI-assisted optimization**: Learn user patterns
 2. **Network-aware features**: Adjust based on bandwidth
 3. **Multi-monitor optimization**: Per-display settings
 4. **Battery mode enhancements**: Even more aggressive power saving
+5. **ARM64 full support**: Complete testing and optimization
 
 ## Contributing
 

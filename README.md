@@ -298,12 +298,19 @@ This will:
 
 ## Latest Stable Release
 
-📥 **[Download AetherOS v1.0 RC ISO](https://github.com/Anamitra-Sarkar/Aether_OS/releases/latest)**
+📥 **[Download AetherOS v2.1 ISO](https://github.com/Anamitra-Sarkar/Aether_OS/releases/latest)**
 
-- **File**: `aetheros.iso`
-- **Size**: ~2.5 GB
-- **Checksum**: Included as `aetheros.iso.sha256`
-- **Requirements**: 2GB RAM minimum, 4GB recommended
+- **File**: `aetheros.iso.xz` (compressed ISO)
+- **Checksum**: `aetheros.iso.xz.sha256`
+- **Size**: ~2.8 GB (compressed), ~3.2 GB (extracted)
+- **Requirements**: 4GB RAM minimum, 8GB recommended
+
+**Extraction**:
+```bash
+xz -d aetheros.iso.xz
+# Verify checksum
+sha256sum -c aetheros.iso.xz.sha256
+```
 
 ---
 
@@ -366,9 +373,33 @@ sudo /opt/aetheros/aether-health.sh
 # v2.0 Tools
 aether-performance-profiler.sh auto    # Auto-detect and optimize
 aether-cleanmode.sh toggle             # Toggle performance mode
-aether-quickpal.sh                     # Launch QuickPal
 aether-focus-mode.sh status            # Check Focus Mode
 aether-profile-sync.sh save            # Save preferences
+
+# v2.1 Security & Session
+aethershieldctl list                   # Show app policies
+aethershieldctl show firefox           # View specific app policy
+aether-secure-session.sh status        # Check secure session
+aether-secure-session.sh start         # Enable lockdown mode
+
+# v2.1 Thermal & Performance
+aether-thermal-watch.sh check          # Check thermal status
+aether-thermal-watch.sh monitor        # Run thermal monitoring
+aether-performance-profiler.sh auto    # Auto performance tuning
+
+# v2.1 QuickPal & Profiles
+aether-quickpal.sh                     # Launch QuickPal search
+aether-profile-sync.sh save myprofile  # Save named profile
+aether-profile-sync.sh load myprofile  # Restore profile
+
+# v2.1 Audio
+aether-audio-profile.sh gaming         # Set gaming audio profile
+aether-audio-profile.sh movie          # Set movie audio profile
+aether-audio-profile.sh voice          # Set voice call profile
+
+# v2.1 Accessibility
+aether-accessibility.sh reduce-motion on   # Disable animations
+aether-accessibility.sh high-contrast on   # Enable high contrast
 ```
 
 ---
@@ -468,21 +499,51 @@ aether-profile-sync.sh save            # Save preferences
   - Created design-architecture.md
   - Documented all new systems and scripts
 
-## v2.1 (Planned)
-* [ ] **Security Evolution**
-  - AetherShield sandbox policies (per-app permissions)
-  - Secure Session Mode toggle
-* [ ] **Audio & Media Polish**
-  - Aether Ocean sound pack
+## v2.1 - Security Evolution (Current) ✅
+* [x] **Security Evolution**
+  - AetherShield CLI + app policy manifests (`aethershieldctl`)
+  - Secure Session Mode for sensitive tasks
+* [x] **Audio & Media Polish**
+  - Aether Ocean sound pack (ocean-inspired sounds)
   - Audio profiles (Movie/Gaming/Voice/Balanced)
-* [ ] **Enhanced Features**
-  - Thermal Mode (dynamic visual adjustment)
+* [x] **Enhanced Features**
+  - Thermal Watch (heat-aware visual intelligence)
   - Holographic login pulse effect
-  - QuickPal text search
-* [ ] **System Improvements**
-  - Full Calamares slideshow
-  - Expanded accessibility features
-  - ARM64 support exploration
+  - QuickPal enhanced with fuzzy search
+* [x] **System Improvements**
+  - Full Calamares slideshow during installation
+  - Expanded accessibility features (Reduced Motion, High Contrast)
+  - ARM64 support exploration (experimental)
+
+## v2.2 - HyperPolish (Current) ✅
+* [x] **System Transparency**
+  - Aether Dashboard (live system overview: CPU, RAM, GPU, thermal)
+  - Real-time monitoring without heavy daemons
+* [x] **Mode Switching**
+  - Game Mode (performance optimization for gaming)
+  - Creator Mode (optimized for content creation)
+  - Easy one-command mode switching
+* [x] **Setup Profiles**
+  - Developer Edition preset (install dev tools)
+  - Minimal Edition preset (remove optional apps)
+  - User-friendly setup experience
+* [x] **Download Experience**
+  - User-friendly download page (website/download.html)
+  - Upload instructions for maintainers
+  - No-cost hosting strategy documented
+* [x] **GUI Enhancements**
+  - AetherShield GUI (basic policy viewer)
+  - kdialog/zenity integration
+
+## v2.3 (Planned)
+* [ ] **Enhanced GUI**
+  - Full AetherShield GUI with policy editing
+  - Thermal monitoring dashboard in Control Center
+  - Audio profile selector GUI
+* [ ] **ARM64 Support**
+  - Complete ARM64 testing and optimization
+  - Raspberry Pi 4/5 support
+  - Touch-friendly interface options
 
 ---
 
