@@ -379,6 +379,54 @@ sudo ufw allow 22/tcp
 gufw
 ```
 
+### AetherShield (v2.1)
+
+Per-app sandbox policy management system:
+
+```bash
+# List managed applications
+aethershieldctl list
+
+# View app policy
+aethershieldctl show firefox
+
+# Apply policy restrictions
+aethershieldctl apply firefox
+
+# Check enforcement status
+aethershieldctl status firefox
+```
+
+**Policy Manifest Location**: `/etc/aetheros/security/apps/`
+
+**Features**:
+- JSON-based app policies
+- Control network, camera, microphone, filesystem access
+- AppArmor and Flatpak integration
+- Phase 1: Policy awareness + partial enforcement
+
+### Secure Session Mode (v2.1)
+
+Lock down your system for sensitive tasks:
+
+```bash
+# Enable secure mode
+aether-secure-session.sh start
+
+# Check status
+aether-secure-session.sh status
+
+# Return to normal
+aether-secure-session.sh stop
+```
+
+**When Active**:
+- Strict firewall rules (deny incoming)
+- SSH server disabled
+- Network services stopped
+- USB automount disabled
+- Visual indicator shown
+
 ### Security Updates
 
 AetherOS includes automatic security update checking:
@@ -481,6 +529,54 @@ AetherOS includes these boot optimizations:
 
 5. **Baloo disabled**:
    - File indexing disabled by default (user can enable)
+
+### Thermal Watch (v2.1)
+
+Heat-aware visual intelligence system:
+
+```bash
+# Check current temperature and state
+aether-thermal-watch.sh check
+
+# Run monitoring daemon
+aether-thermal-watch.sh monitor
+
+# Enable as systemd service
+systemctl --user enable --now aether-thermal.service
+```
+
+**Thermal States**:
+- **Cool** (<60°C): Full visual effects
+- **Warm** (60-75°C): Reduced effects
+- **Hot** (>75°C): Performance mode activated
+
+### Audio Profiles (v2.1)
+
+Optimize audio for different scenarios:
+
+```bash
+# Set profile
+aether-audio-profile.sh movie      # Enhanced bass, surround sound
+aether-audio-profile.sh gaming     # High volume, low latency
+aether-audio-profile.sh voice      # Clear speech, boosted mic
+aether-audio-profile.sh balanced   # Neutral settings (default)
+
+# Check current profile
+aether-audio-profile.sh status
+```
+
+### Accessibility Features (v2.1)
+
+```bash
+# Disable animations (Reduced Motion Mode)
+aether-accessibility.sh reduce-motion on
+
+# Enable high contrast
+aether-accessibility.sh high-contrast on
+
+# Check current settings
+aether-accessibility.sh status
+```
 
 ### Monitoring Performance
 

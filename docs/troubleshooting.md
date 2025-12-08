@@ -265,6 +265,39 @@ htop
 systemctl --user restart SERVICE_NAME
 ```
 
+### Thermal Issues (v2.1)
+
+If your system is overheating:
+
+**1. Check thermal status:**
+```bash
+aether-thermal-watch.sh check
+```
+
+**2. Enable thermal monitoring:**
+```bash
+systemctl --user enable --now aether-thermal.service
+```
+
+**3. Manually activate performance mode:**
+```bash
+aether-cleanmode.sh on
+```
+
+This will reduce visual effects when the system is hot (>75°C).
+
+### Performance Profiling (v2.0/v2.1)
+
+**Auto-optimize for your hardware:**
+```bash
+aether-performance-profiler.sh auto
+```
+
+**Check current profile:**
+```bash
+aether-performance-profiler.sh status
+```
+
 ---
 
 ## Network Issues
@@ -402,6 +435,7 @@ If AetherOS won't boot:
 
 ## Common Command Reference
 
+### System Commands
 | Task | Command |
 |------|---------|
 | Restart desktop | `killall plasmashell && plasmashell &` |
@@ -414,6 +448,34 @@ If AetherOS won't boot:
 | Check memory usage | `free -h` |
 | List running services | `systemctl list-units --type=service --state=running` |
 
+### AetherOS v2.1 Tools
+| Task | Command |
+|------|---------|
+| System health check | `sudo /opt/aetheros/aether-health.sh` |
+| Performance profiling | `aether-performance-profiler.sh auto` |
+| Toggle CleanMode | `aether-cleanmode.sh toggle` |
+| Check thermal status | `aether-thermal-watch.sh check` |
+| QuickPal launcher | `aether-quickpal.sh` |
+| Save profile | `aether-profile-sync.sh save myprofile` |
+| Load profile | `aether-profile-sync.sh load myprofile` |
+
+### AetherOS v2.1 Security Tools
+| Task | Command |
+|------|---------|
+| List app policies | `aethershieldctl list` |
+| View app policy | `aethershieldctl show firefox` |
+| Enable secure session | `aether-secure-session.sh start` |
+| Check secure session | `aether-secure-session.sh status` |
+| Disable secure session | `aether-secure-session.sh stop` |
+
+### AetherOS v2.1 Audio & Accessibility
+| Task | Command |
+|------|---------|
+| Set audio profile | `aether-audio-profile.sh gaming` |
+| Reduce motion | `aether-accessibility.sh reduce-motion on` |
+| High contrast mode | `aether-accessibility.sh high-contrast on` |
+| Check accessibility | `aether-accessibility.sh status` |
+
 ---
 
-**AetherOS v1.0** - For more help, visit our [GitHub repository](https://github.com/Anamitra-Sarkar/Aether_OS).
+**AetherOS v2.1** - For more help, visit our [GitHub repository](https://github.com/Anamitra-Sarkar/Aether_OS).
