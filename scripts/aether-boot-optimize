@@ -50,6 +50,8 @@ readonly -a BOOT_CRITICAL=(
     "ufw.service"
 )
 
+declare -A PROTECTED_DEP_CACHE=()
+
 # =============================================================================
 # Utility Functions
 # =============================================================================
@@ -85,9 +87,13 @@ dependency_safe_to_disable() {
     for protected in "${BOOT_CRITICAL[@]}"; do
         # Ensure dependency resolution works; abort on uncertainty
         local deps
-        if ! deps=$(systemctl list-dependencies "$protected" --plain 2>/dev/null); then
+        if [[ -n "${PROTECTED_DEP_CACHE[$protected]:-}" ]]; then
+            deps="${PROTECTED_DEP_CACHE[$protected]}"
+        elif ! deps=$(systemctl list-dependencies "$protected" --plain 2>/dev/null); then
             log_error "Unable to resolve dependencies for $protected. Aborting optimization."
             return 2
+        else
+            PROTECTED_DEP_CACHE[$protected]="$deps"
         fi
 
         if echo "$deps" | awk '{$1=$1};1' | grep -qx "$candidate"; then
@@ -265,18 +271,18 @@ apply_optimizations() {
         fi
         
         log_info "Optimizing: $service (saves ${time_ms}ms)"
-        
+
         if [[ "$dry_run" == "false" ]]; then
             # Try to disable service
             if systemctl disable "$service" 2>/dev/null; then
                 log_success "Disabled: $service"
-                applied+=("$service:disabled:state:${current_state}:active:${current_active}")
+                applied+=("$service|disabled|state=${current_state}|active=${current_active}")
             else
                 log_warn "Failed to disable: $service"
             fi
         else
             log_info "Would disable: $service"
-            applied+=("$service:would-disable")
+            applied+=("$service|would-disable")
         fi
     done
 
@@ -321,10 +327,19 @@ rollback_optimizations() {
         [[ "$line" =~ ^# ]] && continue
         [[ -z "$line" ]] && continue
         
-        local service=$(echo "$line" | cut -d':' -f1)
-        local action=$(echo "$line" | cut -d':' -f2)
-        local previous_state=$(echo "$line" | cut -d':' -f4)
-        local previous_active=$(echo "$line" | cut -d':' -f6)
+        local delimiter="|"
+        [[ "$line" != *"|"* ]] && delimiter=":"
+
+        local service action state_field active_field previous_state previous_active
+        IFS="$delimiter" read -r service action state_field active_field _ <<< "$line"
+
+        if [[ "$delimiter" == "|" ]]; then
+            previous_state=$(echo "${state_field:-}" | sed 's/^state=//')
+            previous_active=$(echo "${active_field:-}" | sed 's/^active=//')
+        else
+            previous_state=$(echo "$line" | cut -d':' -f4)
+            previous_active=$(echo "$line" | cut -d':' -f6)
+        fi
 
         [[ "$action" == "would-disable" ]] && continue
         

@@ -419,7 +419,7 @@ cmd_auto() {
     local now=$(date +%s)
     if [[ -f "$LAST_CHANGE_FILE" ]]; then
         local last_change
-        last_change=$(cat "$LAST_CHANGE_FILE" 2>/dev/null || echo "0")
+        last_change=$(cat "$LAST_CHANGE_FILE" 2>/dev/null | head -1 | grep -E '^[0-9]+$' || echo "0")
         local elapsed=$((now - last_change))
         if [[ $elapsed -lt $MIN_DWELL_SECONDS ]]; then
             log_warn "Dwell timer active (${elapsed}s < ${MIN_DWELL_SECONDS}s); skipping change"
