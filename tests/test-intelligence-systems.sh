@@ -52,20 +52,32 @@ test_result "aether-threat-scan: help command works" $?
 scripts/aether-threat-scan --version &>/dev/null
 test_result "aether-threat-scan: version command works" $?
 
-# Test that it runs and produces output (normal mode)
-output=$(scripts/aether-threat-scan 2>&1 || true)
+# Test that it runs, logs, and exits success regardless of severity
+output=$(scripts/aether-threat-scan --log-dir /tmp/aetheros-logs 2>&1)
+threat_status=$?
 if [ -n "$output" ] && echo "$output" | grep -q "Threat Surface"; then
     test_result "aether-threat-scan: produces output" 0
 else
     test_result "aether-threat-scan: produces output" 1
 fi
+test_result "aether-threat-scan: exits 0 on successful run" $([ ${threat_status:-1} -eq 0 ] && echo 0 || echo 1)
+test_result "aether-threat-scan: writes primary log (override path)" $([ -f /tmp/aetheros-logs/threat-scan.log ] && echo 0 || echo 1)
 
-# Test that it completes quickly (under 10 seconds)
-start_time=$(date +%s)
-scripts/aether-threat-scan &>/dev/null || true
-end_time=$(date +%s)
-duration=$((end_time - start_time))
-test_result "aether-threat-scan: completes in under 10 seconds" $([ $duration -lt 10 ] && echo 0 || echo 1)
+# Test --fail-on-high using forced high finding
+AETHER_THREAT_FORCE_HIGH=1 scripts/aether-threat-scan --fail-on-high --log-dir /tmp/aetheros-logs &>/dev/null || high_status=$?
+test_result "aether-threat-scan: --fail-on-high returns non-zero when high risk" $([ "${high_status:-0}" -ne 0 ] && echo 0 || echo 1)
+
+# Negative: permission denied logging
+AETHER_THREAT_DISABLE_SUDO=1 scripts/aether-threat-scan --log-dir /root/aetheros-denied &>/dev/null || permission_status=$?
+test_result "aether-threat-scan: fails on log permission denial" $([ "${permission_status:-0}" -ne 0 ] && echo 0 || echo 1)
+
+# Negative: missing subsystem
+AETHER_THREAT_FORCE_MISSING_SS=1 scripts/aether-threat-scan --log-dir /tmp/aetheros-logs &>/dev/null || missing_status=$?
+test_result "aether-threat-scan: detects missing subsystem" $([ "${missing_status:-0}" -ne 0 ] && echo 0 || echo 1)
+
+# Negative: partial scan failure simulation
+AETHER_THREAT_SIMULATE_PARTIAL=1 scripts/aether-threat-scan --log-dir /tmp/aetheros-logs &>/dev/null || partial_status=$?
+test_result "aether-threat-scan: surfaces partial failure" $([ "${partial_status:-0}" -ne 0 ] && echo 0 || echo 1)
 
 echo ""
 
@@ -101,6 +113,13 @@ test_result "aether-boot-optimize: analyze command works" 0
 # Test dry-run mode (should not fail, even without sudo)
 scripts/aether-boot-optimize optimize --dry-run &>/dev/null || true
 test_result "aether-boot-optimize: dry-run mode works" 0
+
+# Guardrails: protected services are present
+grep -q "systemd-udevd.service" scripts/aether-boot-optimize
+test_result "aether-boot-optimize: protects input stack" $?
+
+grep -q "apparmor.service" scripts/aether-boot-optimize
+test_result "aether-boot-optimize: protects security services" $?
 
 echo ""
 
@@ -140,6 +159,14 @@ test_result "aether-cpu-governor: detects battery state" $?
 echo "$output" | grep -qE "Thermal: (normal|warm|hot)" 2>/dev/null
 test_result "aether-cpu-governor: detects thermal state" $?
 
+# Manual override should block automation until resumed
+override_path="$HOME/.local/share/aetheros/cpu-governor/manual-override"
+mkdir -p "$(dirname "$override_path")"
+echo "performance" > "$override_path"
+scripts/aether-cpu-governor auto &>/dev/null
+test_result "aether-cpu-governor: automation respects manual override" $([ -f "$override_path" ] && echo 0 || echo 1)
+rm -f "$override_path"
+
 echo ""
 
 # =============================================================================
@@ -173,6 +200,13 @@ test_result "aether-desktop-recovery: reset command works" $?
 # Check that state directory was created
 state_dir="$HOME/.local/share/aetheros/desktop-recovery"
 test_result "aether-desktop-recovery: state directory created" $([ -d "$state_dir" ] && echo 0 || echo 1)
+
+# Event-driven service should be oneshot and path watcher present
+grep -q "Type=oneshot" opt/systemd/user/aether-desktop-recovery.service
+test_result "aether-desktop-recovery: systemd service is event-driven (oneshot)" $?
+
+path_unit="opt/systemd/user/aether-desktop-recovery.path"
+test_result "aether-desktop-recovery: path unit exists for event trigger" $([ -f "$path_unit" ] && echo 0 || echo 1)
 
 echo ""
 

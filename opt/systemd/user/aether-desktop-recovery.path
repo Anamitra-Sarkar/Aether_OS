@@ -1,0 +1,11 @@
+[Unit]
+Description=AetherOS Desktop Recovery coredump watcher
+After=graphical-session.target
+
+[Path]
+PathChanged=/var/lib/systemd/coredump
+PathModified=/var/lib/systemd/coredump
+Unit=aether-desktop-recovery.service
+
+[Install]
+WantedBy=graphical-session.target
