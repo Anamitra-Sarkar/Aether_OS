@@ -1,11 +1,13 @@
 {
   "name": "Firefox",
   "id": "firefox",
+  "executable": "/usr/lib/firefox/firefox",
   "network": true,
   "camera": false,
   "microphone": false,
   "filesystem": "home",
-  "apparmor_profile": "/etc/apparmor.d/firefox",
+  "ipc": "allowed",
+  "apparmor_profile": "/etc/apparmor.d/aethershield/firefox",
   "flatpak_app_id": "org.mozilla.firefox",
   "description": "Mozilla Firefox Web Browser",
   "permissions": {
@@ -28,6 +30,10 @@
         "$HOME/Downloads"
       ],
       "description": "Access to home directory and downloads"
+    },
+    "ipc": {
+      "enabled": true,
+      "description": "Required for D-Bus communication"
     }
   }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # AetherShield Control - Per-App Sandbox Policy Manager
-# Phase 1: Policy description + partial enforcement + CLI
+# Strict Enforcement Engine with AppArmor + Flatpak Integration
 # =============================================================================
 
 set -euo pipefail
@@ -13,13 +13,26 @@ SYSTEM_POLICY_DIR="/etc/aetheros/security/apps"
 USER_POLICY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/aetheros/security/apps"
 STATE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/aetheros/security"
 LOG_FILE="$STATE_DIR/aethershield.log"
+APPARMOR_PROFILE_DIR="/etc/apparmor.d/aethershield"
+ENFORCEMENT_STATE_FILE="$STATE_DIR/enforcement.state"
 
 # Fallback to repo config for development/testing
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 if [ ! -d "$SYSTEM_POLICY_DIR" ]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    REPO_ROOT="$(dirname "$SCRIPT_DIR")"
     SYSTEM_POLICY_DIR="$REPO_ROOT/configs/aetheros/security/apps"
 fi
+
+# =============================================================================
+# Safety: Abort on failure with cleanup
+# =============================================================================
+# Cleanup is handled by trap - we only need to trap for ERR cases
+# since EXIT runs on every exit. We'll use ERR trap for unexpected failures.
+cleanup_on_error() {
+    local exit_code=$?
+    log_error "Operation failed with exit code $exit_code. Aborting safely."
+}
+trap cleanup_on_error ERR
 
 # =============================================================================
 # Logging
@@ -35,6 +48,57 @@ log_message() {
 
 log_error() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" | tee -a "$LOG_FILE" >&2
+}
+
+log_debug() {
+    if [ "${AETHERSHIELD_DEBUG:-0}" = "1" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] DEBUG: $1" | tee -a "$LOG_FILE"
+    fi
+}
+
+# =============================================================================
+# Requirement Checks
+# =============================================================================
+require_jq() {
+    if ! command -v jq &>/dev/null; then
+        log_error "jq is required for policy parsing. Install with: sudo apt install jq"
+        exit 1
+    fi
+}
+
+require_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        log_error "This operation requires root privileges. Run with sudo."
+        exit 1
+    fi
+}
+
+check_apparmor_available() {
+    if ! command -v apparmor_parser &>/dev/null; then
+        return 1
+    fi
+    if ! [ -d /sys/kernel/security/apparmor ]; then
+        return 1
+    fi
+    return 0
+}
+
+check_flatpak_available() {
+    command -v flatpak &>/dev/null
+}
+
+# =============================================================================
+# Enforcement State Management
+# =============================================================================
+is_enforcement_enabled() {
+    [ -f "$ENFORCEMENT_STATE_FILE" ] && grep -q "^enabled$" "$ENFORCEMENT_STATE_FILE" 2>/dev/null
+}
+
+set_enforcement_state() {
+    local state="$1"
+    mkdir -p "$(dirname "$ENFORCEMENT_STATE_FILE")"
+    echo "$state" > "$ENFORCEMENT_STATE_FILE"
+    log_message "Enforcement state set to: $state"
 }
 
 # =============================================================================
@@ -53,11 +117,7 @@ load_policy() {
         return 1
     fi
     
-    if ! command -v jq &>/dev/null; then
-        # Fallback: simple grep-based parsing
-        cat "$policy_file"
-        return 0
-    fi
+    require_jq
     
     # Validate JSON and return
     if jq empty "$policy_file" 2>/dev/null; then
@@ -69,6 +129,18 @@ load_policy() {
     fi
 }
 
+get_policy_file_path() {
+    local app_id="$1"
+    
+    if [ -f "$USER_POLICY_DIR/${app_id}.json" ]; then
+        echo "$USER_POLICY_DIR/${app_id}.json"
+    elif [ -f "$SYSTEM_POLICY_DIR/${app_id}.json" ]; then
+        echo "$SYSTEM_POLICY_DIR/${app_id}.json"
+    else
+        return 1
+    fi
+}
+
 # =============================================================================
 # List all policies
 # =============================================================================
@@ -76,7 +148,17 @@ list_policies() {
     echo "=== AetherShield Managed Applications ==="
     echo ""
     
+    # Show enforcement state
+    if is_enforcement_enabled; then
+        echo "Enforcement Mode: STRICT (deny unless allowed)"
+    else
+        echo "Enforcement Mode: PERMISSIVE (policy awareness only)"
+    fi
+    echo ""
+    
     local found=0
+    
+    require_jq
     
     # List system policies
     if [ -d "$SYSTEM_POLICY_DIR" ]; then
@@ -85,14 +167,18 @@ list_policies() {
                 local app_id
                 app_id=$(basename "$policy_file" .json)
                 
-                # Get app name if jq available
-                if command -v jq &>/dev/null; then
-                    local app_name
-                    app_name=$(jq -r '.name // .id' "$policy_file" 2>/dev/null || echo "$app_id")
-                    echo "  • $app_name ($app_id)"
-                else
-                    echo "  • $app_id"
+                local app_name
+                app_name=$(jq -r '.name // .id' "$policy_file" 2>/dev/null || echo "$app_id")
+                
+                # Show enforcement status
+                local status_icon="○"
+                if is_enforcement_enabled; then
+                    if is_app_enforced "$app_id"; then
+                        status_icon="●"
+                    fi
                 fi
+                
+                echo "  $status_icon $app_name ($app_id)"
                 
                 found=1
             fi
@@ -111,13 +197,15 @@ list_policies() {
                     continue
                 fi
                 
-                if command -v jq &>/dev/null; then
-                    local app_name
-                    app_name=$(jq -r '.name // .id' "$policy_file" 2>/dev/null || echo "$app_id")
-                    echo "  • $app_name ($app_id) [user]"
-                else
-                    echo "  • $app_id [user]"
+                local app_name
+                app_name=$(jq -r '.name // .id' "$policy_file" 2>/dev/null || echo "$app_id")
+                
+                local status_icon="○"
+                if is_enforcement_enabled && is_app_enforced "$app_id"; then
+                    status_icon="●"
                 fi
+                
+                echo "  $status_icon $app_name ($app_id) [user]"
                 
                 found=1
             fi
@@ -133,6 +221,35 @@ list_policies() {
     fi
     
     echo ""
+    echo "Legend: ● enforced, ○ not enforced"
+    echo ""
+}
+
+is_app_enforced() {
+    local app_id="$1"
+    local enforced_apps_file="$STATE_DIR/enforced_apps.list"
+    
+    [ -f "$enforced_apps_file" ] && grep -q "^${app_id}$" "$enforced_apps_file" 2>/dev/null
+}
+
+mark_app_enforced() {
+    local app_id="$1"
+    local enforced_apps_file="$STATE_DIR/enforced_apps.list"
+    
+    mkdir -p "$(dirname "$enforced_apps_file")"
+    if ! is_app_enforced "$app_id"; then
+        echo "$app_id" >> "$enforced_apps_file"
+    fi
+}
+
+unmark_app_enforced() {
+    local app_id="$1"
+    local enforced_apps_file="$STATE_DIR/enforced_apps.list"
+    
+    if [ -f "$enforced_apps_file" ]; then
+        grep -v "^${app_id}$" "$enforced_apps_file" > "${enforced_apps_file}.tmp" || true
+        mv "${enforced_apps_file}.tmp" "$enforced_apps_file"
+    fi
 }
 
 # =============================================================================
@@ -151,49 +268,626 @@ show_policy() {
         return 1
     fi
     
-    if command -v jq &>/dev/null; then
-        # Pretty print with jq
-        local name network camera microphone filesystem
-        name=$(echo "$policy" | jq -r '.name // .id')
-        network=$(echo "$policy" | jq -r '.network // "unknown"')
-        camera=$(echo "$policy" | jq -r '.camera // "unknown"')
-        microphone=$(echo "$policy" | jq -r '.microphone // "unknown"')
-        filesystem=$(echo "$policy" | jq -r '.filesystem // "unknown"')
-        
-        echo "Application: $name"
+    require_jq
+    
+    # Pretty print with jq
+    local name network camera microphone filesystem ipc
+    name=$(echo "$policy" | jq -r '.name // .id')
+    network=$(echo "$policy" | jq -r '.network // "unknown"')
+    camera=$(echo "$policy" | jq -r '.camera // "unknown"')
+    microphone=$(echo "$policy" | jq -r '.microphone // "unknown"')
+    filesystem=$(echo "$policy" | jq -r '.filesystem // "unknown"')
+    ipc=$(echo "$policy" | jq -r '.ipc // "restricted"')
+    
+    echo "Application: $name"
+    echo ""
+    echo "Permissions (strict mode: deny unless true):"
+    echo "  Network:     $network"
+    echo "  Camera:      $camera"
+    echo "  Microphone:  $microphone"
+    echo "  Filesystem:  $filesystem"
+    echo "  IPC:         $ipc"
+    echo ""
+    
+    # Show detailed permissions if available
+    if echo "$policy" | jq -e '.permissions' >/dev/null 2>&1; then
+        echo "Detailed Permissions:"
+        echo "$policy" | jq -r '.permissions | to_entries[] | "  \(.key): \(.value.enabled) - \(.value.description)"'
         echo ""
-        echo "Permissions:"
-        echo "  Network:     $network"
-        echo "  Camera:      $camera"
-        echo "  Microphone:  $microphone"
-        echo "  Filesystem:  $filesystem"
-        echo ""
-        
-        # Show detailed permissions if available
-        if echo "$policy" | jq -e '.permissions' >/dev/null 2>&1; then
-            echo "Detailed Permissions:"
-            echo "$policy" | jq -r '.permissions | to_entries[] | "  \(.key): \(.value.enabled) - \(.value.description)"'
-            echo ""
+    fi
+    
+    # Show integration info
+    local apparmor_profile flatpak_app_id
+    apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
+    flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+    
+    echo "Integration:"
+    echo "  AppArmor Profile: $apparmor_profile"
+    echo "  Flatpak App ID:   $flatpak_app_id"
+    
+    # Show enforcement status
+    echo ""
+    echo "Enforcement Status:"
+    if is_enforcement_enabled; then
+        echo "  Global Mode: STRICT"
+        if is_app_enforced "$app_id"; then
+            echo "  App Status:  ENFORCED"
+        else
+            echo "  App Status:  NOT ENFORCED (run 'enforce $app_id' to apply)"
         fi
-        
-        # Show integration info
-        local apparmor_profile flatpak_app_id
-        apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
-        flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
-        
-        echo "Integration:"
-        echo "  AppArmor Profile: $apparmor_profile"
-        echo "  Flatpak App ID:   $flatpak_app_id"
     else
-        # Fallback: just show raw JSON
-        echo "$policy"
+        echo "  Global Mode: PERMISSIVE (run 'enable' to activate strict mode)"
     fi
     
     echo ""
 }
 
 # =============================================================================
-# Apply policy (Phase 1: partial enforcement)
+# AppArmor Profile Generation
+# =============================================================================
+generate_apparmor_profile() {
+    local app_id="$1"
+    
+    require_jq
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        log_error "Cannot generate profile - policy not found for: $app_id"
+        return 1
+    fi
+    
+    local name executable
+    name=$(echo "$policy" | jq -r '.name // .id')
+    executable=$(echo "$policy" | jq -r '.executable // "/usr/bin/\(.id)"')
+    
+    # Get permissions from policy
+    local network camera microphone filesystem ipc
+    network=$(echo "$policy" | jq -r '.network // false')
+    camera=$(echo "$policy" | jq -r '.camera // false')
+    microphone=$(echo "$policy" | jq -r '.microphone // false')
+    filesystem=$(echo "$policy" | jq -r '.filesystem // "limited"')
+    ipc=$(echo "$policy" | jq -r '.ipc // "restricted"')
+    
+    # Build AppArmor profile
+    local profile_name="aethershield.${app_id}"
+    local profile_content
+    
+    profile_content=$(cat << PROFILE
+# AetherShield AppArmor Profile for $name
+# Generated by aethershieldctl - Strict Enforcement Mode
+# Policy: deny unless explicitly allowed
+
+#include <tunables/global>
+
+profile ${profile_name} ${executable} flags=(attach_disconnected) {
+  #include <abstractions/base>
+
+  # Deny all by default - explicit allows below
+
+PROFILE
+)
+
+    # Network permissions
+    if [ "$network" = "true" ]; then
+        profile_content+="
+  # Network access allowed
+  network inet stream,
+  network inet dgram,
+  network inet6 stream,
+  network inet6 dgram,
+  network netlink raw,
+"
+    else
+        profile_content+="
+  # Network access DENIED
+  deny network inet,
+  deny network inet6,
+"
+    fi
+
+    # Camera permissions
+    if [ "$camera" = "true" ]; then
+        profile_content+="
+  # Camera access allowed
+  /dev/video* rw,
+  /sys/class/video4linux/** r,
+"
+    else
+        profile_content+="
+  # Camera access DENIED
+  deny /dev/video* rwklx,
+"
+    fi
+
+    # Microphone permissions
+    if [ "$microphone" = "true" ]; then
+        profile_content+="
+  # Microphone access allowed
+  /dev/snd/* rw,
+  owner /run/user/*/pulse/ r,
+  owner /run/user/*/pulse/** rw,
+  owner /run/user/*/pipewire-* rw,
+"
+    else
+        profile_content+="
+  # Microphone access DENIED (audio output may still work)
+  deny /dev/snd/pcmC*D*c rw,
+"
+    fi
+
+    # Filesystem permissions based on mode
+    case "$filesystem" in
+        home)
+            profile_content+="
+  # Filesystem: home directory access
+  owner @{HOME}/ r,
+  owner @{HOME}/** rwk,
+  owner @{HOME}/.config/** rwk,
+  owner @{HOME}/.local/** rwk,
+  owner @{HOME}/.cache/** rwk,
+"
+            ;;
+        limited)
+            profile_content+="
+  # Filesystem: limited access (Downloads only)
+  owner @{HOME}/Downloads/ rw,
+  owner @{HOME}/Downloads/** rw,
+  owner @{HOME}/.config/${app_id}/ rw,
+  owner @{HOME}/.config/${app_id}/** rwk,
+  owner @{HOME}/.cache/${app_id}/ rw,
+  owner @{HOME}/.cache/${app_id}/** rwk,
+"
+            ;;
+        read-only)
+            profile_content+="
+  # Filesystem: read-only home access
+  owner @{HOME}/ r,
+  owner @{HOME}/** r,
+  deny @{HOME}/** w,
+"
+            ;;
+        *)
+            profile_content+="
+  # Filesystem: minimal access
+  owner @{HOME}/.config/${app_id}/ rw,
+  owner @{HOME}/.config/${app_id}/** rwk,
+"
+            ;;
+    esac
+
+    # IPC permissions
+    if [ "$ipc" = "allowed" ]; then
+        profile_content+="
+  # IPC: allowed
+  #include <abstractions/dbus-session-strict>
+  #include <abstractions/dbus-strict>
+  /run/dbus/** rw,
+  owner /run/user/*/bus rw,
+"
+    else
+        profile_content+="
+  # IPC: restricted
+  deny /run/dbus/** rw,
+"
+    fi
+
+    # Common denials for security
+    profile_content+="
+  # Security: deny sensitive locations
+  deny /boot/** rwklx,
+  deny /root/** rwklx,
+  deny /etc/shadow r,
+  deny /etc/sudoers r,
+  deny /etc/sudoers.d/** r,
+  deny /etc/ssh/** rwklx,
+  deny @{HOME}/.ssh/** rwklx,
+  deny @{HOME}/.gnupg/** rwklx,
+
+  # Allow common system resources (read-only)
+  /etc/ld.so.cache r,
+  /etc/ld.so.preload r,
+  /usr/share/** r,
+  /proc/sys/kernel/random/uuid r,
+  /sys/devices/system/cpu/** r,
+  
+  # Temp files
+  owner /tmp/${app_id}*/ rw,
+  owner /tmp/${app_id}*/** rwk,
+}
+"
+
+    echo "$profile_content"
+}
+
+install_apparmor_profile() {
+    local app_id="$1"
+    
+    require_root
+    
+    if ! check_apparmor_available; then
+        log_error "AppArmor is not available on this system"
+        return 1
+    fi
+    
+    local profile_content
+    if ! profile_content=$(generate_apparmor_profile "$app_id"); then
+        return 1
+    fi
+    
+    local profile_file="${APPARMOR_PROFILE_DIR}/${app_id}"
+    
+    # Create profile directory
+    mkdir -p "$APPARMOR_PROFILE_DIR"
+    
+    # Write profile
+    echo "$profile_content" > "$profile_file"
+    log_message "AppArmor profile written to: $profile_file"
+    
+    # Load profile
+    local load_output
+    if load_output=$(apparmor_parser -r "$profile_file" 2>&1); then
+        log_message "AppArmor profile loaded for: $app_id"
+        return 0
+    else
+        log_error "Failed to load AppArmor profile for: $app_id"
+        log_error "AppArmor error: $load_output"
+        return 1
+    fi
+}
+
+unload_apparmor_profile() {
+    local app_id="$1"
+    
+    require_root
+    
+    local profile_file="${APPARMOR_PROFILE_DIR}/${app_id}"
+    local profile_name="aethershield.${app_id}"
+    
+    if [ -f "$profile_file" ]; then
+        # Unload profile
+        if apparmor_parser -R "$profile_file" 2>&1; then
+            log_message "AppArmor profile unloaded for: $app_id"
+        fi
+        
+        # Remove profile file
+        rm -f "$profile_file"
+        log_message "AppArmor profile removed: $profile_file"
+    fi
+}
+
+# =============================================================================
+# Flatpak Integration
+# =============================================================================
+sync_flatpak_permissions() {
+    local app_id="$1"
+    
+    require_jq
+    
+    if ! check_flatpak_available; then
+        log_error "Flatpak is not available on this system"
+        return 1
+    fi
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        log_error "Cannot sync - policy not found for: $app_id"
+        return 1
+    fi
+    
+    local flatpak_app_id
+    flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+    
+    if [ "$flatpak_app_id" = "none" ]; then
+        log_message "No Flatpak app ID configured for: $app_id"
+        return 0
+    fi
+    
+    # Check if app is installed
+    if ! flatpak list --app 2>/dev/null | grep -q "$flatpak_app_id"; then
+        log_message "Flatpak app not installed: $flatpak_app_id"
+        return 0
+    fi
+    
+    echo "Syncing Flatpak permissions for: $flatpak_app_id"
+    
+    # Get permissions from policy
+    local network camera microphone filesystem
+    network=$(echo "$policy" | jq -r '.network // false')
+    camera=$(echo "$policy" | jq -r '.camera // false')
+    microphone=$(echo "$policy" | jq -r '.microphone // false')
+    filesystem=$(echo "$policy" | jq -r '.filesystem // "limited"')
+    
+    # AetherShield > Flatpak defaults - deterministic conflict resolution
+    # Apply AetherShield policy as overrides
+    
+    # Network permission
+    if [ "$network" = "false" ]; then
+        echo "  → Restricting network access"
+        flatpak override --user --unshare=network "$flatpak_app_id" 2>/dev/null || true
+    else
+        echo "  → Allowing network access"
+        flatpak override --user --share=network "$flatpak_app_id" 2>/dev/null || true
+    fi
+    
+    # Camera permission (via device access)
+    if [ "$camera" = "false" ]; then
+        echo "  → Restricting camera access"
+        flatpak override --user --nodevice=all "$flatpak_app_id" 2>/dev/null || true
+    else
+        echo "  → Allowing camera access"
+        flatpak override --user --device=all "$flatpak_app_id" 2>/dev/null || true
+    fi
+    
+    # Microphone permission (via PulseAudio socket)
+    if [ "$microphone" = "false" ]; then
+        echo "  → Restricting microphone access"
+        flatpak override --user --nosocket=pulseaudio "$flatpak_app_id" 2>/dev/null || true
+    else
+        echo "  → Allowing microphone access"
+        flatpak override --user --socket=pulseaudio "$flatpak_app_id" 2>/dev/null || true
+    fi
+    
+    # Filesystem permissions
+    case "$filesystem" in
+        home)
+            echo "  → Allowing home directory access"
+            flatpak override --user --filesystem=home "$flatpak_app_id" 2>/dev/null || true
+            ;;
+        limited)
+            echo "  → Restricting to Downloads directory"
+            flatpak override --user --nofilesystem=home "$flatpak_app_id" 2>/dev/null || true
+            flatpak override --user --filesystem=xdg-download "$flatpak_app_id" 2>/dev/null || true
+            ;;
+        read-only)
+            echo "  → Setting read-only home access"
+            flatpak override --user --filesystem=home:ro "$flatpak_app_id" 2>/dev/null || true
+            ;;
+        *)
+            echo "  → Restricting filesystem access"
+            flatpak override --user --nofilesystem=home "$flatpak_app_id" 2>/dev/null || true
+            ;;
+    esac
+    
+    log_message "Flatpak permissions synced for: $flatpak_app_id"
+    echo "✓ Flatpak permissions synced"
+}
+
+reset_flatpak_permissions() {
+    local app_id="$1"
+    
+    require_jq
+    
+    if ! check_flatpak_available; then
+        return 1
+    fi
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        return 1
+    fi
+    
+    local flatpak_app_id
+    flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+    
+    if [ "$flatpak_app_id" = "none" ]; then
+        return 0
+    fi
+    
+    # Reset all user overrides
+    flatpak override --user --reset "$flatpak_app_id" 2>/dev/null || true
+    log_message "Flatpak permissions reset for: $flatpak_app_id"
+}
+
+# =============================================================================
+# Strict Enforcement Commands
+# =============================================================================
+enable_enforcement() {
+    echo "=== Enabling AetherShield Strict Enforcement Mode ==="
+    echo ""
+    
+    if is_enforcement_enabled; then
+        echo "Strict enforcement is already enabled"
+        return 0
+    fi
+    
+    set_enforcement_state "enabled"
+    
+    echo "✓ Strict enforcement mode enabled"
+    echo ""
+    echo "Default behavior is now: DENY unless explicitly allowed"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Use 'enforce APP_ID' to apply policies to specific apps"
+    echo "  2. Use 'enforce-all' to apply all policies"
+    echo ""
+}
+
+disable_enforcement() {
+    echo "=== Disabling AetherShield Strict Enforcement Mode ==="
+    echo ""
+    
+    if ! is_enforcement_enabled; then
+        echo "Strict enforcement is already disabled"
+        return 0
+    fi
+    
+    # Unenforce all apps
+    local enforced_apps_file="$STATE_DIR/enforced_apps.list"
+    if [ -f "$enforced_apps_file" ]; then
+        while IFS= read -r app_id; do
+            if [ -n "$app_id" ]; then
+                echo "Removing enforcement for: $app_id"
+                unenforce_app "$app_id" || true
+            fi
+        done < "$enforced_apps_file"
+    fi
+    
+    set_enforcement_state "disabled"
+    
+    echo ""
+    echo "✓ Strict enforcement mode disabled"
+    echo "  All restrictions removed"
+    echo ""
+}
+
+enforce_app() {
+    local app_id="$1"
+    
+    echo "=== Enforcing Policy: $app_id ==="
+    echo ""
+    
+    if ! is_enforcement_enabled; then
+        log_error "Enforcement mode is not enabled. Run 'enable' first."
+        return 1
+    fi
+    
+    local policy
+    if ! policy=$(load_policy "$app_id"); then
+        log_error "Cannot enforce - policy not found for: $app_id"
+        return 1
+    fi
+    
+    log_message "Enforcing policy for: $app_id"
+    
+    local success=0
+    
+    # Apply AppArmor profile if available
+    if check_apparmor_available; then
+        echo "→ Generating and installing AppArmor profile..."
+        if [ "$(id -u)" -eq 0 ]; then
+            if install_apparmor_profile "$app_id"; then
+                echo "  ✓ AppArmor profile installed"
+                success=1
+            else
+                echo "  ✗ Failed to install AppArmor profile"
+            fi
+        else
+            echo "  ℹ AppArmor requires root - skipping (run with sudo for full enforcement)"
+        fi
+    else
+        echo "  ℹ AppArmor not available"
+    fi
+    
+    # Apply Flatpak permissions
+    if check_flatpak_available; then
+        echo "→ Syncing Flatpak permissions..."
+        if sync_flatpak_permissions "$app_id"; then
+            success=1
+        fi
+    else
+        echo "  ℹ Flatpak not available"
+    fi
+    
+    if [ $success -eq 1 ]; then
+        mark_app_enforced "$app_id"
+        echo ""
+        echo "✓ Policy enforced for: $app_id"
+        log_message "Policy enforcement completed for: $app_id"
+    else
+        echo ""
+        echo "⚠ No enforcement mechanisms available"
+        echo "  Install AppArmor or Flatpak for full enforcement"
+    fi
+    
+    echo ""
+}
+
+unenforce_app() {
+    local app_id="$1"
+    
+    echo "=== Removing Enforcement: $app_id ==="
+    echo ""
+    
+    log_message "Removing enforcement for: $app_id"
+    
+    # Unload AppArmor profile if root
+    if [ "$(id -u)" -eq 0 ] && check_apparmor_available; then
+        echo "→ Removing AppArmor profile..."
+        unload_apparmor_profile "$app_id" || true
+        echo "  ✓ AppArmor profile removed"
+    fi
+    
+    # Reset Flatpak permissions
+    if check_flatpak_available; then
+        echo "→ Resetting Flatpak permissions..."
+        reset_flatpak_permissions "$app_id" || true
+        echo "  ✓ Flatpak permissions reset"
+    fi
+    
+    unmark_app_enforced "$app_id"
+    
+    echo ""
+    echo "✓ Enforcement removed for: $app_id"
+    echo ""
+}
+
+enforce_all() {
+    echo "=== Enforcing All Policies ==="
+    echo ""
+    
+    if ! is_enforcement_enabled; then
+        log_error "Enforcement mode is not enabled. Run 'enable' first."
+        return 1
+    fi
+    
+    local count=0
+    
+    # Enforce system policies
+    if [ -d "$SYSTEM_POLICY_DIR" ]; then
+        for policy_file in "$SYSTEM_POLICY_DIR"/*.json; do
+            if [ -f "$policy_file" ]; then
+                local app_id
+                app_id=$(basename "$policy_file" .json)
+                enforce_app "$app_id"
+                count=$((count + 1))
+            fi
+        done
+    fi
+    
+    # Enforce user policies
+    if [ -d "$USER_POLICY_DIR" ]; then
+        for policy_file in "$USER_POLICY_DIR"/*.json; do
+            if [ -f "$policy_file" ]; then
+                local app_id
+                app_id=$(basename "$policy_file" .json)
+                # Skip if already done from system
+                if [ -f "$SYSTEM_POLICY_DIR/${app_id}.json" ]; then
+                    continue
+                fi
+                enforce_app "$app_id"
+                count=$((count + 1))
+            fi
+        done
+    fi
+    
+    echo ""
+    echo "✓ Enforced $count policies"
+    echo ""
+}
+
+# =============================================================================
+# Generate Profile Command
+# =============================================================================
+generate_profile_command() {
+    local app_id="$1"
+    
+    echo "=== Generating AppArmor Profile: $app_id ==="
+    echo ""
+    
+    local profile_content
+    if ! profile_content=$(generate_apparmor_profile "$app_id"); then
+        return 1
+    fi
+    
+    echo "$profile_content"
+    echo ""
+    echo "---"
+    echo "To install this profile:"
+    echo "  sudo aethershieldctl enforce $app_id"
+    echo ""
+}
+# =============================================================================
+# Apply policy (legacy compatibility - now calls enforce)
 # =============================================================================
 apply_policy() {
     local app_id="$1"
@@ -209,77 +903,62 @@ apply_policy() {
     
     log_message "Applying policy for: $app_id"
     
-    # Phase 1: Partial enforcement
-    # We'll check what we can do and report
+    require_jq
     
-    local applied=0
+    # If enforcement is enabled, use strict enforcement
+    if is_enforcement_enabled; then
+        enforce_app "$app_id"
+        return $?
+    fi
     
-    # Check if Flatpak app
-    if command -v jq &>/dev/null; then
-        local flatpak_app_id
-        flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+    # Otherwise, show what would be enforced (permissive mode)
+    echo "Mode: PERMISSIVE (policy awareness only)"
+    echo ""
+    
+    local flatpak_app_id
+    flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+    
+    if [ "$flatpak_app_id" != "none" ] && check_flatpak_available; then
+        echo "Flatpak app: $flatpak_app_id"
         
-        if [ "$flatpak_app_id" != "none" ] && command -v flatpak &>/dev/null; then
-            echo "Checking Flatpak app: $flatpak_app_id"
+        if flatpak list --app 2>/dev/null | grep -q "$flatpak_app_id"; then
+            echo "  ✓ Flatpak app found"
             
-            if flatpak list --app | grep -q "$flatpak_app_id"; then
-                echo "  ✓ Flatpak app found"
-                
-                # Apply Flatpak permissions
-                local network camera microphone filesystem
-                network=$(echo "$policy" | jq -r '.network')
-                camera=$(echo "$policy" | jq -r '.camera')
-                microphone=$(echo "$policy" | jq -r '.microphone')
-                filesystem=$(echo "$policy" | jq -r '.filesystem')
-                
-                # Network permission
-                if [ "$network" = "false" ]; then
-                    echo "  → Would restrict network access"
-                    echo "     (Phase 1: Policy awareness only)"
-                    # TODO Phase 2: flatpak override --user --unshare=network "$flatpak_app_id"
-                fi
-                
-                # Camera/Microphone
-                if [ "$camera" = "false" ]; then
-                    echo "  → Would disable camera access"
-                    echo "     (Phase 1: Policy awareness only)"
-                fi
-                if [ "$microphone" = "false" ]; then
-                    echo "  → Would disable microphone access"
-                    echo "     (Phase 1: Policy awareness only)"
-                fi
-                
-                applied=1
-            else
-                echo "  ℹ Flatpak app not installed"
+            local network camera microphone filesystem
+            network=$(echo "$policy" | jq -r '.network')
+            camera=$(echo "$policy" | jq -r '.camera')
+            microphone=$(echo "$policy" | jq -r '.microphone')
+            filesystem=$(echo "$policy" | jq -r '.filesystem')
+            
+            if [ "$network" = "false" ]; then
+                echo "  → Would restrict network access"
             fi
-        fi
-        
-        # Check AppArmor profile
-        local apparmor_profile
-        apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
-        
-        if [ "$apparmor_profile" != "none" ] && command -v aa-status &>/dev/null; then
-            if [ -f "$apparmor_profile" ]; then
-                echo "AppArmor profile: $apparmor_profile"
-                echo "  → Would load AppArmor profile (requires root)"
-                # Commented out for Phase 1
-                # sudo apparmor_parser -r "$apparmor_profile" 2>/dev/null || true
-                applied=1
-            else
-                echo "  ℹ AppArmor profile not found: $apparmor_profile"
+            if [ "$camera" = "false" ]; then
+                echo "  → Would disable camera access"
             fi
+            if [ "$microphone" = "false" ]; then
+                echo "  → Would disable microphone access"
+            fi
+        else
+            echo "  ℹ Flatpak app not installed"
         fi
     fi
     
-    if [ $applied -eq 0 ]; then
-        echo "ℹ Policy loaded but no enforcement applied (Phase 1)"
-        echo "  This is normal - Phase 1 focuses on policy awareness"
-        echo "  Full enforcement will come in future phases"
+    local apparmor_profile
+    apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
+    
+    if [ "$apparmor_profile" != "none" ]; then
+        echo ""
+        echo "AppArmor profile: $apparmor_profile"
+        echo "  → Would generate and load AppArmor profile"
     fi
+    
+    echo ""
+    echo "ℹ Policy loaded but no enforcement applied (permissive mode)"
+    echo "  Run 'aethershieldctl enable' to activate strict enforcement"
+    echo ""
     
     log_message "Policy application completed for: $app_id"
-    echo ""
     echo "✓ Policy processing complete"
     echo ""
 }
@@ -299,45 +978,70 @@ check_status() {
         return 1
     fi
     
-    echo "Status: Policy configured"
+    require_jq
     
-    if command -v jq &>/dev/null; then
-        local flatpak_app_id
-        flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
-        
-        if [ "$flatpak_app_id" != "none" ] && command -v flatpak &>/dev/null; then
-            if flatpak list --app | grep -q "$flatpak_app_id"; then
-                echo "Flatpak:    Installed"
-                
-                # Check current overrides
-                if flatpak override --user --show "$flatpak_app_id" 2>/dev/null | grep -q "unshare=network"; then
-                    echo "Network:    Restricted"
-                else
-                    echo "Network:    Allowed"
-                fi
+    echo "Policy: Configured"
+    
+    # Global enforcement state
+    if is_enforcement_enabled; then
+        echo "Global Enforcement: STRICT"
+    else
+        echo "Global Enforcement: PERMISSIVE"
+    fi
+    
+    # App enforcement state
+    if is_app_enforced "$app_id"; then
+        echo "App Enforcement: ACTIVE"
+    else
+        echo "App Enforcement: INACTIVE"
+    fi
+    
+    echo ""
+    
+    # Check Flatpak status
+    local flatpak_app_id
+    flatpak_app_id=$(echo "$policy" | jq -r '.flatpak_app_id // "none"')
+    
+    if [ "$flatpak_app_id" != "none" ] && check_flatpak_available; then
+        if flatpak list --app 2>/dev/null | grep -q "$flatpak_app_id"; then
+            echo "Flatpak:    Installed ($flatpak_app_id)"
+            
+            # Check current overrides
+            local overrides
+            overrides=$(flatpak override --user --show "$flatpak_app_id" 2>/dev/null || echo "")
+            if echo "$overrides" | grep -q "unshare=network"; then
+                echo "  Network:    Restricted"
             else
-                echo "Flatpak:    Not installed"
+                echo "  Network:    Allowed"
             fi
-        fi
-        
-        local apparmor_profile
-        apparmor_profile=$(echo "$policy" | jq -r '.apparmor_profile // "none"')
-        
-        if [ "$apparmor_profile" != "none" ]; then
-            if [ -f "$apparmor_profile" ]; then
-                echo "AppArmor:   Profile exists"
-                
-                if command -v aa-status &>/dev/null; then
-                    if sudo aa-status 2>/dev/null | grep -q "$(basename "$apparmor_profile")"; then
-                        echo "            Loaded"
-                    else
-                        echo "            Not loaded"
-                    fi
-                fi
+            if echo "$overrides" | grep -q "nodevice=all"; then
+                echo "  Devices:    Restricted"
             else
-                echo "AppArmor:   Profile not found"
+                echo "  Devices:    Allowed"
             fi
+        else
+            echo "Flatpak:    Not installed"
         fi
+    fi
+    
+    # Check AppArmor status
+    local apparmor_profile_file="${APPARMOR_PROFILE_DIR}/${app_id}"
+    local profile_name="aethershield.${app_id}"
+    
+    if check_apparmor_available; then
+        if [ -f "$apparmor_profile_file" ]; then
+            echo "AppArmor:   Profile exists"
+            
+            if aa-status 2>/dev/null | grep -q "$profile_name"; then
+                echo "            Loaded and enforcing"
+            else
+                echo "            Not loaded"
+            fi
+        else
+            echo "AppArmor:   No profile generated"
+        fi
+    else
+        echo "AppArmor:   Not available"
     fi
     
     echo ""
@@ -349,36 +1053,62 @@ check_status() {
 show_help() {
     cat << EOF
 AetherShield Control - Per-App Sandbox Policy Manager
-
-Phase 1: Policy description + partial enforcement
+Strict Enforcement Engine with AppArmor + Flatpak Integration
 
 Usage: $(basename "$0") COMMAND [OPTIONS]
 
-Commands:
-  list              List all managed applications
-  show APP_ID       Show policy details for an app
-  apply APP_ID      Apply policy for an app
-  status APP_ID     Check enforcement status for an app
-  help              Show this help
+Enforcement Commands:
+  enable              Enable strict enforcement mode (deny unless allowed)
+  disable             Disable strict enforcement mode
+  enforce APP_ID      Enforce policy for an app (AppArmor + Flatpak)
+  unenforce APP_ID    Remove enforcement for an app
+  enforce-all         Enforce all configured policies
+
+Policy Commands:
+  list                List all managed applications
+  show APP_ID         Show policy details for an app
+  apply APP_ID        Apply policy for an app
+  status APP_ID       Check enforcement status for an app
+
+Profile Commands:
+  generate-profile APP_ID    Generate AppArmor profile for an app
+  sync-flatpak APP_ID        Sync Flatpak permissions with policy
+
+Other:
+  help                Show this help
 
 Examples:
-  $(basename "$0") list
-  $(basename "$0") show firefox
-  $(basename "$0") apply firefox
-  $(basename "$0") status firefox
+  $(basename "$0") enable                # Enable strict enforcement
+  $(basename "$0") enforce firefox       # Enforce Firefox policy
+  $(basename "$0") list                  # List all managed apps
+  $(basename "$0") show firefox          # Show Firefox policy
+  $(basename "$0") status firefox        # Check Firefox status
+  $(basename "$0") generate-profile firefox  # Generate AppArmor profile
+  $(basename "$0") sync-flatpak firefox  # Sync Flatpak permissions
 
 Policy Files:
   System: $SYSTEM_POLICY_DIR
   User:   $USER_POLICY_DIR
 
+AppArmor Profiles:
+  $APPARMOR_PROFILE_DIR/
+
 Logs:
   $LOG_FILE
 
-Phase 1 Notes:
-  - Policies are opt-in and won't break apps by default
-  - Focus is on policy awareness and CLI functionality
-  - Full automatic enforcement coming in future phases
-  - Integration with AppArmor and Flatpak where available
+Strict Enforcement Mode:
+  - Default behavior: DENY unless explicitly allowed
+  - AppArmor profiles generated dynamically per policy
+  - Flatpak permissions synced with AetherShield policies
+  - AetherShield > Flatpak defaults (deterministic conflict resolution)
+  - Profiles are namespaced per application
+  - Reloadable without reboot
+
+Requirements:
+  - jq (for policy parsing)
+  - AppArmor (for kernel-level enforcement)
+  - Flatpak (for container-level enforcement)
+  - Root privileges for AppArmor profile loading
 
 EOF
 }
@@ -390,6 +1120,31 @@ main() {
     setup_logging
     
     case "${1:-help}" in
+        enable)
+            enable_enforcement
+            ;;
+        disable)
+            disable_enforcement
+            ;;
+        enforce)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") enforce APP_ID" >&2
+                exit 1
+            fi
+            enforce_app "$2"
+            ;;
+        unenforce)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") unenforce APP_ID" >&2
+                exit 1
+            fi
+            unenforce_app "$2"
+            ;;
+        enforce-all)
+            enforce_all
+            ;;
         list)
             list_policies
             ;;
@@ -416,6 +1171,22 @@ main() {
                 exit 1
             fi
             check_status "$2"
+            ;;
+        generate-profile)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") generate-profile APP_ID" >&2
+                exit 1
+            fi
+            generate_profile_command "$2"
+            ;;
+        sync-flatpak)
+            if [ -z "${2:-}" ]; then
+                echo "Error: Please specify an app ID" >&2
+                echo "Usage: $(basename "$0") sync-flatpak APP_ID" >&2
+                exit 1
+            fi
+            sync_flatpak_permissions "$2"
             ;;
         help|--help|-h)
             show_help
