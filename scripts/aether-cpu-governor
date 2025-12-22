@@ -417,16 +417,17 @@ cmd_auto() {
 
     # Oscillation protection
     local now=$(date +%s)
+    local last_change="0"
     if [[ -f "$LAST_CHANGE_FILE" ]]; then
-        local last_change
-        last_change=$(cat "$LAST_CHANGE_FILE" 2>/dev/null | head -1 | grep -E '^[0-9]+$' || echo "0")
-        local elapsed=$((now - last_change))
-        if [[ $elapsed -lt $MIN_DWELL_SECONDS ]]; then
-            log_warn "Dwell timer active (${elapsed}s < ${MIN_DWELL_SECONDS}s); skipping change"
-            return 0
-        fi
+        read -r last_change < "$LAST_CHANGE_FILE" || last_change="0"
+        [[ "$last_change" =~ ^[0-9]+$ ]] || last_change="0"
     fi
-    
+    local elapsed=$((now - last_change))
+    if [[ $elapsed -lt $MIN_DWELL_SECONDS ]]; then
+        log_warn "Dwell timer active (${elapsed}s < ${MIN_DWELL_SECONDS}s); skipping change"
+        return 0
+    fi
+
     # Set the governor
     if set_governor "$governor"; then
         echo "$now" > "$LAST_CHANGE_FILE"

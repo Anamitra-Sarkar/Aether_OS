@@ -86,12 +86,14 @@ require_command() {
     local cmd=$1
     local label=$2
     local upper_cmd
-    upper_cmd=$(echo "$cmd" | tr '[:lower:]' '[:upper:]')
+    upper_cmd=$(printf '%s' "$cmd" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')
     local var_name="AETHER_THREAT_FORCE_MISSING_${upper_cmd}"
-    local forced_missing="${!var_name:-0}"
+    local forced_missing
+    forced_missing=$(printenv "$var_name" 2>/dev/null || echo "0")
 
     if [[ "$forced_missing" == "1" ]]; then
         PARTIAL_FAILURE=1
+        log_to_file "Missing dependency forced for $label ($cmd)"
         return 1
     fi
 

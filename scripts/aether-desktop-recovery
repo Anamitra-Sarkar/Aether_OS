@@ -366,13 +366,19 @@ process_coredump() {
     local crashed_process="unknown"
 
     if [[ -n "$core_path" ]] && [[ -f "$core_path" ]]; then
-        crashed_process=$(basename "$core_path" | sed 's/^core\.//')
+        local core_name
+        core_name=$(basename "$core_path")
+        crashed_process=${core_name#core.}
+        crashed_process=${crashed_process%%.*}
     else
         # Try newest core in systemd coredump directory
         local latest_core
         latest_core=$(ls -t "${COREDUMP_DIR}"/core.* 2>/dev/null | head -1 || true)
         if [[ -n "$latest_core" ]]; then
-            crashed_process=$(basename "$latest_core" | sed 's/^core\.//')
+            local core_name
+            core_name=$(basename "$latest_core")
+            crashed_process=${core_name#core.}
+            crashed_process=${crashed_process%%.*}
         fi
     fi
 
