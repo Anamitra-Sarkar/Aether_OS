@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <em>Status: v2.1 - Security Evolution</em>
+  <em>Status: v2.3 - Intelligence Systems</em>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/Anamitra-Sarkar/Aether_OS/build.yml?label=Build&style=flat-square">
   <img src="https://img.shields.io/github/license/Anamitra-Sarkar/Aether_OS?style=flat-square">
-  <img src="https://img.shields.io/badge/version-2.1-blue?style=flat-square">
+  <img src="https://img.shields.io/badge/version-2.3-blue?style=flat-square">
   <img src="https://img.shields.io/badge/base-Ubuntu%2024.04%20LTS-orange?style=flat-square">
 </p>
 
@@ -158,6 +158,38 @@ The mission is simple:
 * High-DPI support
 * Keyboard navigation optimized
 * Screen reader compatible
+
+### 🧩 Intelligence Systems (v2.3)
+
+* **Threat Surface Scanner**: Offline security visibility
+  - Fast, deterministic security assessment
+  - Scans for exposed services, SUID binaries, permission risks
+  - Risk rating with exact remediation steps
+  - JSON output for automation
+  - CLI: `aether-threat-scan`
+
+* **Boot Intelligence Engine**: Learn and optimize boot time
+  - Analyzes systemd boot metrics
+  - Intelligently disables slow, non-essential services
+  - Never touches boot-critical services
+  - Full transparency with rollback capability
+  - CLI: `aether-boot-optimize`
+
+* **Dynamic CPU Governor**: Context-aware performance scaling
+  - Rule-based governor selection (no ML)
+  - Considers battery, thermal state, load, foreground app
+  - Manual override support
+  - Supports Intel, AMD, ARM CPUs
+  - CLI: `aether-cpu-governor`
+
+* **Desktop Recovery**: Wayland crash containment
+  - Auto-detects and recovers from compositor/shell crashes
+  - Preserves running applications
+  - Fallback to X11 after repeated failures
+  - Never forces logout or kills apps
+  - CLI: `aether-desktop-recovery`
+
+See [docs/INTELLIGENCE-SYSTEMS.md](docs/INTELLIGENCE-SYSTEMS.md) for detailed documentation.
 
 ### 🔐 Privacy-Focused
 
