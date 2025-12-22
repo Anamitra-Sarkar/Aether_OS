@@ -85,7 +85,9 @@ log_to_file() {
 require_command() {
     local cmd=$1
     local label=$2
-    local var_name="AETHER_THREAT_FORCE_MISSING_${cmd^^}"
+    local upper_cmd
+    upper_cmd=$(echo "$cmd" | tr '[:lower:]' '[:upper:]')
+    local var_name="AETHER_THREAT_FORCE_MISSING_${upper_cmd}"
     local forced_missing="${!var_name:-0}"
 
     if [[ "$forced_missing" == "1" ]]; then

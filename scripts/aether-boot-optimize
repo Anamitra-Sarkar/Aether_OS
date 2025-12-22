@@ -96,7 +96,7 @@ dependency_safe_to_disable() {
             PROTECTED_DEP_CACHE[$protected]="$deps"
         fi
 
-        if echo "$deps" | awk '{$1=$1};1' | grep -qx "$candidate"; then
+        if echo "$deps" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qx "$candidate"; then
             log_warn "Protected service $protected depends on $candidate; skipping."
             return 1
         fi
@@ -276,13 +276,13 @@ apply_optimizations() {
             # Try to disable service
             if systemctl disable "$service" 2>/dev/null; then
                 log_success "Disabled: $service"
-                applied+=("$service|disabled|state=${current_state}|active=${current_active}")
+                applied+=("v2|$service|disabled|state=${current_state}|active=${current_active}")
             else
                 log_warn "Failed to disable: $service"
             fi
         else
             log_info "Would disable: $service"
-            applied+=("$service|would-disable")
+            applied+=("v2|$service|would-disable")
         fi
     done
 
@@ -330,8 +330,15 @@ rollback_optimizations() {
         local delimiter="|"
         [[ "$line" != *"|"* ]] && delimiter=":"
 
-        local service action state_field active_field previous_state previous_active
-        IFS="$delimiter" read -r service action state_field active_field _ <<< "$line"
+        local service action state_field active_field previous_state previous_active remainder
+        IFS="$delimiter" read -r service action state_field active_field remainder <<< "$line"
+
+        if [[ "$delimiter" == "|" ]] && [[ "$service" == "v2" ]]; then
+            service="$action"
+            action="$state_field"
+            state_field="$active_field"
+            active_field="$remainder"
+        fi
 
         if [[ "$delimiter" == "|" ]]; then
             previous_state=$(echo "${state_field:-}" | sed 's/^state=//')
