@@ -1,0 +1,548 @@
+#!/bin/bash
+# =============================================================================
+# AetherOS Threat Surface Scanner
+# Offline security visibility and risk assessment
+# =============================================================================
+
+set -euo pipefail
+
+# =============================================================================
+# Configuration
+# =============================================================================
+readonly VERSION="1.0.0"
+readonly LOG_DIR="${HOME}/.local/share/aetheros/logs"
+readonly CACHE_DIR="${HOME}/.cache/aetheros"
+readonly RED="\033[0;31m"
+readonly YELLOW="\033[0;33m"
+readonly GREEN="\033[0;32m"
+readonly BLUE="\033[0;34m"
+readonly CYAN="\033[0;36m"
+readonly BOLD="\033[1m"
+readonly RESET="\033[0m"
+
+# JSON output flag
+JSON_OUTPUT=false
+
+# Risk counters
+HIGH_RISK=0
+MEDIUM_RISK=0
+LOW_RISK=0
+
+# JSON array for findings
+declare -a JSON_FINDINGS=()
+
+# =============================================================================
+# Utility Functions
+# =============================================================================
+log_header() {
+    if [[ "$JSON_OUTPUT" == "false" ]]; then
+        echo -e "\n${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+        echo -e "${CYAN}${BOLD}$1${RESET}"
+        echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    fi
+}
+
+log_finding() {
+    local severity=$1
+    local category=$2
+    local finding=$3
+    local risk=$4
+    local remediation=$5
+    
+    # Increment risk counters
+    case "$severity" in
+        HIGH) ((HIGH_RISK++)) ;;
+        MEDIUM) ((MEDIUM_RISK++)) ;;
+        LOW) ((LOW_RISK++)) ;;
+    esac
+    
+    if [[ "$JSON_OUTPUT" == "true" ]]; then
+        # Escape JSON strings properly
+        finding=$(echo "$finding" | sed 's/"/\\"/g' | sed 's/$/\\n/' | tr -d '\n' | sed 's/\\n$//')
+        risk=$(echo "$risk" | sed 's/"/\\"/g' | sed 's/$/\\n/' | tr -d '\n' | sed 's/\\n$//')
+        remediation=$(echo "$remediation" | sed 's/"/\\"/g' | sed 's/$/\\n/' | tr -d '\n' | sed 's/\\n$//')
+        
+        JSON_FINDINGS+=("{\"severity\":\"$severity\",\"category\":\"$category\",\"finding\":\"$finding\",\"risk\":\"$risk\",\"remediation\":\"$remediation\"}")
+    else
+        local color
+        case "$severity" in
+            HIGH) color=$RED ;;
+            MEDIUM) color=$YELLOW ;;
+            LOW) color=$BLUE ;;
+        esac
+        
+        echo -e "\n${color}[${severity}]${RESET} ${BOLD}$category${RESET}"
+        echo -e "  Finding: $finding"
+        echo -e "  Risk: $risk"
+        echo -e "  Remediation: $remediation"
+    fi
+}
+
+# =============================================================================
+# Scan Functions
+# =============================================================================
+
+# Scan for open and listening services
+scan_listening_services() {
+    log_header "Scanning Open & Listening Services"
+    
+    # Use ss to get listening ports (more efficient than netstat)
+    if command -v ss &>/dev/null; then
+        # Get TCP and UDP listening ports
+        while IFS= read -r line; do
+            # Parse ss output: Proto State Recv-Q Send-Q Local-Address:Port Peer-Address:Port Process
+            local proto=$(echo "$line" | awk '{print $1}')
+            local local_addr=$(echo "$line" | awk '{print $5}')
+            local process=$(echo "$line" | awk '{print $7}' | sed 's/users:((//' | sed 's/).*//' | cut -d',' -f1 | tr -d '"')
+            
+            # Extract IP and port
+            local ip=$(echo "$local_addr" | rev | cut -d':' -f2- | rev)
+            local port=$(echo "$local_addr" | rev | cut -d':' -f1 | rev)
+            
+            # Skip if no process info
+            [[ -z "$process" ]] && continue
+            
+            # Check if exposed on non-loopback
+            if [[ ! "$ip" =~ ^127\. ]] && [[ "$ip" != "::1" ]] && [[ "$ip" != "[::1]" ]]; then
+                local severity="MEDIUM"
+                
+                # High risk ports
+                if [[ "$port" =~ ^(21|23|25|110|143|445|3389|5900)$ ]]; then
+                    severity="HIGH"
+                fi
+                
+                log_finding "$severity" "Exposed Service" \
+                    "Service '$process' listening on $proto $local_addr" \
+                    "Service is accessible from network interfaces, potentially exposing the system to external attacks" \
+                    "Review if service needs network exposure. Consider binding to 127.0.0.1 or using firewall rules: sudo ufw deny $port/$proto"
+            fi
+        done < <(ss -tulpn 2>/dev/null | grep LISTEN || true)
+    fi
+    
+    # Check for services on privileged ports exposed externally
+    if command -v ss &>/dev/null; then
+        while IFS= read -r line; do
+            local port=$(echo "$line" | awk '{print $5}' | rev | cut -d':' -f1 | rev)
+            local ip=$(echo "$line" | awk '{print $5}' | rev | cut -d':' -f2- | rev)
+            local process=$(echo "$line" | awk '{print $7}' | sed 's/users:((//' | sed 's/).*//' | cut -d',' -f1 | tr -d '"')
+            
+            if [[ "$port" =~ ^[0-9]+$ ]] && [[ "$port" -lt 1024 ]] && [[ ! "$ip" =~ ^127\. ]]; then
+                log_finding "MEDIUM" "Privileged Port Exposure" \
+                    "Service '$process' on privileged port $port accessible from network" \
+                    "Privileged ports below 1024 require root access and may indicate critical services exposed" \
+                    "Verify service legitimacy and consider firewall restrictions"
+            fi
+        done < <(ss -tulpn 2>/dev/null | grep LISTEN || true)
+    fi
+}
+
+# Scan for SUID/SGID binaries
+scan_suid_sgid() {
+    log_header "Scanning SUID/SGID Binaries"
+    
+    # Known safe SUID binaries (standard system utilities)
+    local -a known_safe=(
+        "/usr/bin/sudo"
+        "/usr/bin/su"
+        "/usr/bin/passwd"
+        "/usr/bin/chsh"
+        "/usr/bin/chfn"
+        "/usr/bin/newgrp"
+        "/usr/bin/gpasswd"
+        "/usr/bin/mount"
+        "/usr/bin/umount"
+        "/usr/bin/pkexec"
+        "/usr/lib/dbus-1.0/dbus-daemon-launch-helper"
+        "/usr/lib/openssh/ssh-keysign"
+        "/usr/lib/policykit-1/polkit-agent-helper-1"
+    )
+    
+    # Find SUID binaries in common system directories
+    local -a search_paths=("/usr/bin" "/usr/sbin" "/usr/local/bin" "/usr/local/sbin" "/bin" "/sbin")
+    
+    for path in "${search_paths[@]}"; do
+        [[ ! -d "$path" ]] && continue
+        
+        while IFS= read -r binary; do
+            [[ -z "$binary" ]] && continue
+            
+            # Check if it's in known safe list
+            local is_safe=false
+            for safe in "${known_safe[@]}"; do
+                if [[ "$binary" == "$safe" ]]; then
+                    is_safe=true
+                    break
+                fi
+            done
+            
+            if [[ "$is_safe" == "false" ]]; then
+                local owner=$(stat -c '%U' "$binary" 2>/dev/null || echo "unknown")
+                log_finding "HIGH" "Non-Standard SUID Binary" \
+                    "SUID binary found: $binary (owner: $owner)" \
+                    "SUID binaries run with elevated privileges and can be exploited for privilege escalation if vulnerable" \
+                    "Review if SUID bit is necessary: sudo chmod u-s '$binary' (ensure this won't break functionality)"
+            fi
+        done < <(find "$path" -maxdepth 1 -type f -perm -4000 2>/dev/null || true)
+        
+        # Check SGID binaries
+        while IFS= read -r binary; do
+            [[ -z "$binary" ]] && continue
+            
+            local is_safe=false
+            for safe in "${known_safe[@]}"; do
+                if [[ "$binary" == "$safe" ]]; then
+                    is_safe=true
+                    break
+                fi
+            done
+            
+            if [[ "$is_safe" == "false" ]]; then
+                local group=$(stat -c '%G' "$binary" 2>/dev/null || echo "unknown")
+                log_finding "MEDIUM" "Non-Standard SGID Binary" \
+                    "SGID binary found: $binary (group: $group)" \
+                    "SGID binaries run with group privileges and may allow unauthorized access to group resources" \
+                    "Review if SGID bit is necessary: sudo chmod g-s '$binary'"
+            fi
+        done < <(find "$path" -maxdepth 1 -type f -perm -2000 2>/dev/null || true)
+    done
+}
+
+# Scan filesystem permissions
+scan_filesystem_permissions() {
+    log_header "Scanning Filesystem Permissions"
+    
+    # Check for world-writable files in sensitive directories
+    local -a sensitive_dirs=("/etc" "/usr" "/bin" "/sbin" "/lib" "/lib64")
+    
+    for dir in "${sensitive_dirs[@]}"; do
+        [[ ! -d "$dir" ]] && continue
+        
+        # Find world-writable files (excluding /tmp-like directories)
+        while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            
+            # Skip if it's a symbolic link or directory
+            [[ -L "$file" ]] && continue
+            [[ -d "$file" ]] && continue
+            
+            log_finding "HIGH" "World-Writable System File" \
+                "File is world-writable: $file" \
+                "Any user can modify this file, potentially allowing privilege escalation or system compromise" \
+                "Remove write permissions: sudo chmod o-w '$file'"
+        done < <(find "$dir" -type f -perm -002 2>/dev/null | head -20 || true)
+    done
+    
+    # Check /etc permissions specifically
+    if [[ -d "/etc" ]]; then
+        # Check critical config files
+        local -a critical_files=(
+            "/etc/passwd"
+            "/etc/shadow"
+            "/etc/group"
+            "/etc/gshadow"
+            "/etc/sudoers"
+        )
+        
+        for file in "${critical_files[@]}"; do
+            [[ ! -f "$file" ]] && continue
+            
+            local perms=$(stat -c '%a' "$file" 2>/dev/null || echo "000")
+            
+            case "$file" in
+                "/etc/shadow"|"/etc/gshadow")
+                    # Should be 0640 or 0000
+                    if [[ ! "$perms" =~ ^(640|600|400|000)$ ]]; then
+                        log_finding "HIGH" "Insecure Shadow File Permissions" \
+                            "$file has permissions $perms (expected 640 or stricter)" \
+                            "Password hashes may be exposed to unauthorized users" \
+                            "Fix permissions: sudo chmod 640 '$file'"
+                    fi
+                    ;;
+                "/etc/passwd"|"/etc/group")
+                    # Should be 0644
+                    if [[ ! "$perms" =~ ^(644|640|600|444|440|400)$ ]]; then
+                        log_finding "MEDIUM" "Unusual Permissions on User Database" \
+                            "$file has permissions $perms (expected 644)" \
+                            "May allow unauthorized modification of user information" \
+                            "Fix permissions: sudo chmod 644 '$file'"
+                    fi
+                    ;;
+                "/etc/sudoers")
+                    # Should be 0440
+                    if [[ "$perms" != "440" ]]; then
+                        log_finding "HIGH" "Insecure Sudoers File Permissions" \
+                            "$file has permissions $perms (expected 440)" \
+                            "Unauthorized users may be able to modify sudo privileges" \
+                            "Fix permissions: sudo chmod 440 '$file'"
+                    fi
+                    ;;
+            esac
+        done
+    fi
+}
+
+# Scan configuration weaknesses
+scan_configuration_weaknesses() {
+    log_header "Scanning Configuration Weaknesses"
+    
+    # Check for writable systemd unit files
+    local -a systemd_dirs=(
+        "/etc/systemd/system"
+        "/usr/lib/systemd/system"
+        "/lib/systemd/system"
+        "${HOME}/.config/systemd/user"
+    )
+    
+    for dir in "${systemd_dirs[@]}"; do
+        [[ ! -d "$dir" ]] && continue
+        
+        # Find world-writable or group-writable unit files
+        while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ -L "$file" ]] && continue
+            
+            local perms=$(stat -c '%a' "$file" 2>/dev/null || echo "000")
+            local owner=$(stat -c '%U' "$file" 2>/dev/null || echo "unknown")
+            
+            # Check if writable by group or others
+            if [[ "$perms" =~ [2367]$ ]] || [[ "$perms" =~ ^[0-9][2367][0-9]$ ]]; then
+                log_finding "HIGH" "Writable Systemd Unit File" \
+                    "Unit file $file has insecure permissions $perms (owner: $owner)" \
+                    "Unauthorized users may modify service behavior, potentially leading to privilege escalation" \
+                    "Fix permissions: sudo chmod 644 '$file' && sudo systemctl daemon-reload"
+            fi
+        done < <(find "$dir" -maxdepth 2 -type f \( -name "*.service" -o -name "*.timer" -o -name "*.socket" \) 2>/dev/null || true)
+    done
+    
+    # Check SSH configuration if present
+    if [[ -f "/etc/ssh/sshd_config" ]]; then
+        # Check for PermitRootLogin
+        if grep -Eq "^\s*PermitRootLogin\s+yes" /etc/ssh/sshd_config 2>/dev/null; then
+            log_finding "HIGH" "SSH Root Login Enabled" \
+                "SSH server allows direct root login" \
+                "Allowing direct root login increases attack surface and bypasses audit trails" \
+                "Disable root login: sudo sed -i 's/^\\s*PermitRootLogin\\s\\+yes/PermitRootLogin no/' /etc/ssh/sshd_config && sudo systemctl reload sshd"
+        fi
+        
+        # Check for PasswordAuthentication
+        if grep -Eq "^\s*PasswordAuthentication\s+yes" /etc/ssh/sshd_config 2>/dev/null; then
+            log_finding "MEDIUM" "SSH Password Authentication Enabled" \
+                "SSH allows password-based authentication" \
+                "Password authentication is vulnerable to brute-force attacks; key-based auth is more secure" \
+                "Consider using key-based authentication: sudo sed -i 's/^\\s*PasswordAuthentication\\s\\+yes/PasswordAuthentication no/' /etc/ssh/sshd_config"
+        fi
+    fi
+    
+    # Check for Docker socket permissions
+    if [[ -S "/var/run/docker.sock" ]]; then
+        local perms=$(stat -c '%a' /var/run/docker.sock 2>/dev/null || echo "000")
+        local group=$(stat -c '%G' /var/run/docker.sock 2>/dev/null || echo "unknown")
+        
+        if [[ "$perms" =~ [2367]$ ]]; then
+            log_finding "HIGH" "Docker Socket World-Writable" \
+                "Docker socket /var/run/docker.sock is writable by others (permissions: $perms)" \
+                "Any user can control Docker, effectively gaining root access" \
+                "Fix permissions: sudo chmod 660 /var/run/docker.sock"
+        fi
+        
+        # Check if non-privileged users are in docker group
+        local docker_group_users=$(getent group docker 2>/dev/null | cut -d: -f4)
+        if [[ -n "$docker_group_users" ]]; then
+            log_finding "MEDIUM" "Users in Docker Group" \
+                "Users in docker group: $docker_group_users" \
+                "Docker group membership grants effective root access through container escapes" \
+                "Review docker group membership and consider using rootless Docker or stricter access control"
+        fi
+    fi
+}
+
+# =============================================================================
+# Risk Assessment
+# =============================================================================
+calculate_overall_risk() {
+    local risk_level="Low"
+    
+    if [[ $HIGH_RISK -gt 0 ]]; then
+        risk_level="High"
+    elif [[ $MEDIUM_RISK -gt 3 ]]; then
+        risk_level="High"
+    elif [[ $MEDIUM_RISK -gt 0 ]]; then
+        risk_level="Medium"
+    elif [[ $LOW_RISK -gt 5 ]]; then
+        risk_level="Medium"
+    fi
+    
+    echo "$risk_level"
+}
+
+# =============================================================================
+# Output Functions
+# =============================================================================
+print_summary() {
+    if [[ "$JSON_OUTPUT" == "true" ]]; then
+        local overall_risk=$(calculate_overall_risk)
+        local findings_json=$(IFS=,; echo "${JSON_FINDINGS[*]}")
+        
+        cat <<EOF
+{
+  "version": "$VERSION",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "overall_risk": "$overall_risk",
+  "summary": {
+    "high_risk": $HIGH_RISK,
+    "medium_risk": $MEDIUM_RISK,
+    "low_risk": $LOW_RISK,
+    "total": $((HIGH_RISK + MEDIUM_RISK + LOW_RISK))
+  },
+  "findings": [$findings_json]
+}
+EOF
+    else
+        echo ""
+        log_header "Threat Surface Scan Summary"
+        echo ""
+        
+        local overall_risk=$(calculate_overall_risk)
+        local risk_color
+        case "$overall_risk" in
+            High) risk_color=$RED ;;
+            Medium) risk_color=$YELLOW ;;
+            Low) risk_color=$GREEN ;;
+        esac
+        
+        echo -e "${BOLD}Overall Risk Level:${RESET} ${risk_color}${overall_risk}${RESET}"
+        echo ""
+        echo -e "${BOLD}Findings by Severity:${RESET}"
+        echo -e "  ${RED}High Risk:${RESET}    $HIGH_RISK"
+        echo -e "  ${YELLOW}Medium Risk:${RESET}  $MEDIUM_RISK"
+        echo -e "  ${BLUE}Low Risk:${RESET}     $LOW_RISK"
+        echo -e "  ${BOLD}Total:${RESET}        $((HIGH_RISK + MEDIUM_RISK + LOW_RISK))"
+        echo ""
+        
+        if [[ $HIGH_RISK -gt 0 ]]; then
+            echo -e "${RED}⚠ High risk findings require immediate attention${RESET}"
+        elif [[ $MEDIUM_RISK -gt 0 ]]; then
+            echo -e "${YELLOW}⚠ Medium risk findings should be reviewed${RESET}"
+        else
+            echo -e "${GREEN}✓ No critical security issues detected${RESET}"
+        fi
+        echo ""
+    fi
+}
+
+show_help() {
+    cat <<EOF
+AetherOS Threat Surface Scanner v${VERSION}
+Offline security visibility and risk assessment
+
+USAGE:
+    aether-threat-scan [OPTIONS]
+
+OPTIONS:
+    --json          Output results in JSON format
+    --help          Show this help message
+    --version       Show version information
+
+DESCRIPTION:
+    Performs a fast, offline, deterministic assessment of the system's
+    security exposure without performing penetration testing or network
+    activity.
+
+SCAN CATEGORIES:
+    • Open & Listening Services
+    • SUID/SGID Binaries
+    • Filesystem Permission Risks
+    • Configuration Weaknesses
+
+OUTPUT:
+    • Overall risk rating (Low/Medium/High)
+    • Categorized findings
+    • Risk explanations
+    • Exact remediation commands
+
+EXAMPLES:
+    # Run basic scan
+    aether-threat-scan
+
+    # Output as JSON
+    aether-threat-scan --json
+
+    # Save JSON report
+    aether-threat-scan --json > security-report.json
+
+NOTE:
+    This tool performs passive inspection only and requires no internet
+    access. It completes in under 5 seconds on SSD systems.
+
+EOF
+}
+
+# =============================================================================
+# Main Function
+# =============================================================================
+main() {
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json)
+                JSON_OUTPUT=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            --version|-v)
+                echo "aether-threat-scan v${VERSION}"
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                echo "Use --help for usage information" >&2
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Print header
+    if [[ "$JSON_OUTPUT" == "false" ]]; then
+        echo -e "${CYAN}${BOLD}"
+        echo "╔════════════════════════════════════════════════════════════════╗"
+        echo "║        AetherOS Threat Surface Scanner v${VERSION}              ║"
+        echo "║        Offline Security Visibility & Risk Assessment          ║"
+        echo "╚════════════════════════════════════════════════════════════════╝"
+        echo -e "${RESET}"
+    fi
+    
+    # Record start time
+    local start_time=$(date +%s)
+    
+    # Run scans
+    scan_listening_services
+    scan_suid_sgid
+    scan_filesystem_permissions
+    scan_configuration_weaknesses
+    
+    # Calculate execution time
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    
+    # Print summary
+    print_summary
+    
+    # Print execution time
+    if [[ "$JSON_OUTPUT" == "false" ]]; then
+        echo -e "${BLUE}Scan completed in ${duration}s${RESET}"
+    fi
+    
+    # Exit with appropriate code
+    if [[ $HIGH_RISK -gt 0 ]]; then
+        exit 2
+    elif [[ $MEDIUM_RISK -gt 0 ]]; then
+        exit 1
+    else
+        exit 0
+    fi
+}
+
+main "$@"

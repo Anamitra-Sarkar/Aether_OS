@@ -659,6 +659,13 @@ systemctl enable aetheros-security-check.timer 2>/dev/null || true
 EOF
         log "Security update timer installed and enabled"
     fi
+    
+    # Copy user systemd services (desktop recovery)
+    if [[ -d "$REPO_ROOT/opt/systemd/user" ]]; then
+        mkdir -p "$CHROOT_DIR/etc/systemd/user"
+        cp "$REPO_ROOT/opt/systemd/user/"*.service "$CHROOT_DIR/etc/systemd/user/" 2>/dev/null || true
+        log "User systemd services installed"
+    fi
 
     log "Security configured"
 }
