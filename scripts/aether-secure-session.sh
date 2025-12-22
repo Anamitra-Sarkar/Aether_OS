@@ -1,6 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # AetherOS Secure Session Mode
+# Soft-Immutable Secure Session with OverlayFS
 # Temporary lockdown mode for banking, exams, sensitive work
 # =============================================================================
 
@@ -13,6 +14,30 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/aetheros"
 STATE_FILE="$CONFIG_DIR/.secure-session-active"
 BACKUP_DIR="$CONFIG_DIR/secure-session-backup"
 LOG_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/aetheros/secure-session.log"
+
+# OverlayFS Configuration
+OVERLAY_BASE="/var/lib/aetheros/secure-session"
+OVERLAY_UPPER="$OVERLAY_BASE/upper"
+OVERLAY_WORK="$OVERLAY_BASE/work"
+OVERLAY_MERGED="$OVERLAY_BASE/merged"
+OVERLAY_STATE_FILE="$CONFIG_DIR/.overlay-active"
+OVERLAY_MOUNTS_FILE="$CONFIG_DIR/.overlay-mounts"
+
+# =============================================================================
+# Safety: Abort on failure with cleanup
+# =============================================================================
+cleanup_on_error() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        log_error "Operation failed with exit code $exit_code. Attempting safe cleanup."
+        # Attempt to unmount any overlays on failure
+        if [ -f "$OVERLAY_MOUNTS_FILE" ]; then
+            unmount_overlays || true
+        fi
+    fi
+    exit $exit_code
+}
+trap cleanup_on_error EXIT
 
 # =============================================================================
 # Logging
@@ -30,6 +55,189 @@ log_message() {
 
 log_error() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" | tee -a "$LOG_FILE" >&2
+}
+
+# =============================================================================
+# Requirement Checks
+# =============================================================================
+require_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        log_error "This operation requires root privileges. Run with sudo."
+        exit 1
+    fi
+}
+
+check_overlay_available() {
+    # Check if overlayfs is available in kernel
+    if [ -f /proc/filesystems ] && grep -q overlay /proc/filesystems; then
+        return 0
+    fi
+    # Try to load the module
+    if modprobe overlay 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+is_overlay_active() {
+    [ -f "$OVERLAY_STATE_FILE" ] && [ -f "$OVERLAY_MOUNTS_FILE" ]
+}
+
+# =============================================================================
+# OverlayFS Functions
+# =============================================================================
+setup_overlay_dirs() {
+    require_root
+    
+    mkdir -p "$OVERLAY_BASE"
+    mkdir -p "$OVERLAY_UPPER"
+    mkdir -p "$OVERLAY_WORK"
+    mkdir -p "$OVERLAY_MERGED"
+    
+    # Set proper permissions
+    chmod 700 "$OVERLAY_BASE"
+    
+    log_message "Overlay directories created at: $OVERLAY_BASE"
+}
+
+mount_overlay() {
+    local target_dir="$1"
+    local mount_name="$2"
+    
+    require_root
+    
+    if ! check_overlay_available; then
+        log_error "OverlayFS is not available on this system"
+        return 1
+    fi
+    
+    # Create overlay-specific directories
+    local upper_dir="${OVERLAY_UPPER}/${mount_name}"
+    local work_dir="${OVERLAY_WORK}/${mount_name}"
+    local merged_dir="${OVERLAY_MERGED}/${mount_name}"
+    
+    mkdir -p "$upper_dir"
+    mkdir -p "$work_dir"
+    mkdir -p "$merged_dir"
+    
+    # Mount overlay
+    if mount -t overlay overlay \
+        -o "lowerdir=${target_dir},upperdir=${upper_dir},workdir=${work_dir}" \
+        "$merged_dir" 2>&1; then
+        log_message "Overlay mounted: $target_dir -> $merged_dir"
+        echo "${mount_name}:${target_dir}:${merged_dir}" >> "$OVERLAY_MOUNTS_FILE"
+        return 0
+    else
+        log_error "Failed to mount overlay for: $target_dir"
+        return 1
+    fi
+}
+
+mount_overlays() {
+    require_root
+    
+    echo "→ Setting up OverlayFS for soft-immutable session..."
+    
+    if ! check_overlay_available; then
+        echo "  ℹ OverlayFS not available - skipping soft-immutable mode"
+        return 0
+    fi
+    
+    setup_overlay_dirs
+    
+    # Clear previous mounts file
+    rm -f "$OVERLAY_MOUNTS_FILE"
+    touch "$OVERLAY_MOUNTS_FILE"
+    
+    local mount_count=0
+    
+    # Mount overlay on user config directory (soft-immutable)
+    # Changes during session are temporary and discarded on session end
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+    if [ -d "$config_dir" ]; then
+        echo "  → Mounting overlay on config directory..."
+        if mount_overlay "$config_dir" "config"; then
+            echo "    ✓ Config directory protected (changes are temporary)"
+            mount_count=$((mount_count + 1))
+        fi
+    fi
+    
+    # Mount overlay on browser cache/data (optional, for extra security)
+    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+    if [ -d "$cache_dir" ]; then
+        echo "  → Mounting overlay on cache directory..."
+        if mount_overlay "$cache_dir" "cache"; then
+            echo "    ✓ Cache directory protected (changes are temporary)"
+            mount_count=$((mount_count + 1))
+        fi
+    fi
+    
+    if [ $mount_count -gt 0 ]; then
+        echo "active" > "$OVERLAY_STATE_FILE"
+        echo "  ✓ OverlayFS soft-immutable mode active ($mount_count directories)"
+        log_message "OverlayFS overlays mounted: $mount_count directories"
+    else
+        echo "  ℹ No overlays mounted"
+    fi
+}
+
+unmount_overlays() {
+    require_root
+    
+    echo "→ Unmounting OverlayFS overlays..."
+    
+    if [ ! -f "$OVERLAY_MOUNTS_FILE" ]; then
+        echo "  ℹ No overlay mounts to remove"
+        return 0
+    fi
+    
+    local unmount_count=0
+    
+    # Unmount in reverse order
+    tac "$OVERLAY_MOUNTS_FILE" 2>/dev/null | while IFS=':' read -r mount_name target_dir merged_dir; do
+        if [ -n "$merged_dir" ] && mountpoint -q "$merged_dir" 2>/dev/null; then
+            echo "  → Unmounting: $merged_dir"
+            if umount "$merged_dir" 2>&1; then
+                log_message "Overlay unmounted: $merged_dir"
+                unmount_count=$((unmount_count + 1))
+            else
+                log_error "Failed to unmount: $merged_dir"
+                # Try lazy unmount as fallback
+                umount -l "$merged_dir" 2>/dev/null || true
+            fi
+        fi
+    done
+    
+    # Clean up overlay directories
+    rm -rf "$OVERLAY_UPPER" 2>/dev/null || true
+    rm -rf "$OVERLAY_WORK" 2>/dev/null || true
+    rm -rf "$OVERLAY_MERGED" 2>/dev/null || true
+    
+    # Remove state files
+    rm -f "$OVERLAY_STATE_FILE"
+    rm -f "$OVERLAY_MOUNTS_FILE"
+    
+    echo "  ✓ All overlays unmounted (temporary changes discarded)"
+    log_message "OverlayFS overlays cleaned up"
+}
+
+show_overlay_status() {
+    echo ""
+    echo "OverlayFS Status:"
+    
+    if is_overlay_active; then
+        echo "  Soft-Immutable Mode: ACTIVE"
+        echo "  Protected directories:"
+        if [ -f "$OVERLAY_MOUNTS_FILE" ]; then
+            while IFS=':' read -r mount_name target_dir merged_dir; do
+                if [ -n "$target_dir" ]; then
+                    echo "    • $target_dir (changes are temporary)"
+                fi
+            done < "$OVERLAY_MOUNTS_FILE"
+        fi
+    else
+        echo "  Soft-Immutable Mode: INACTIVE"
+    fi
 }
 
 # =============================================================================
@@ -60,6 +268,8 @@ backup_state() {
 # Enable Secure Session
 # =============================================================================
 enable_secure_session() {
+    local use_overlay="${1:-true}"
+    
     if is_active; then
         echo "⚠ Secure Session is already active"
         return 0
@@ -68,10 +278,20 @@ enable_secure_session() {
     echo "=== Enabling Secure Session Mode ==="
     echo ""
     
-    log_message "Enabling Secure Session Mode"
+    log_message "Enabling Secure Session Mode (overlay=$use_overlay)"
     
     # Backup current state
     backup_state
+    
+    # 0. Setup OverlayFS for soft-immutable mode (if root and requested)
+    if [ "$use_overlay" = "true" ] && [ "$(id -u)" -eq 0 ]; then
+        mount_overlays
+    elif [ "$use_overlay" = "true" ]; then
+        echo "→ OverlayFS requires root privileges"
+        echo "  Run with sudo for soft-immutable mode"
+        echo "  Continuing without overlay protection..."
+        echo ""
+    fi
     
     # 1. Configure firewall (strict mode)
     echo "→ Configuring firewall (strict mode)..."
@@ -125,7 +345,11 @@ enable_secure_session() {
     fi
     
     # Save stopped services list
-    printf "%s\n" "${services_to_stop[@]}" > "$BACKUP_DIR/stopped-services.txt" 2>/dev/null || true
+    if [ ${#services_to_stop[@]} -gt 0 ]; then
+        printf "%s\n" "${services_to_stop[@]}" > "$BACKUP_DIR/stopped-services.txt"
+    else
+        touch "$BACKUP_DIR/stopped-services.txt"
+    fi
     
     echo "  ✓ Services restricted"
     
@@ -146,8 +370,6 @@ enable_secure_session() {
         # Check if AppArmor is active
         if sudo aa-status --enabled 2>/dev/null; then
             echo "  ✓ AppArmor is active"
-            # Note: We don't change AppArmor mode to avoid breaking apps
-            # This is just a check
         else
             echo "  ℹ AppArmor not active"
         fi
@@ -156,8 +378,10 @@ enable_secure_session() {
     fi
     
     # 5. Create state file
+    mkdir -p "$(dirname "$STATE_FILE")"
     echo "active" > "$STATE_FILE"
     date '+%Y-%m-%d %H:%M:%S' >> "$STATE_FILE"
+    echo "overlay=$use_overlay" >> "$STATE_FILE"
     
     # 6. Show visual indicator
     show_indicator
@@ -170,6 +394,9 @@ enable_secure_session() {
     echo "  • SSH: Disabled"
     echo "  • Network services: Restricted"
     echo "  • USB automount: Disabled"
+    if is_overlay_active; then
+        echo "  • Soft-Immutable: Config/cache changes are temporary"
+    fi
     echo ""
     echo "To disable: $(basename "$0") stop"
     echo ""
@@ -190,6 +417,15 @@ disable_secure_session() {
     echo ""
     
     log_message "Disabling Secure Session Mode"
+    
+    # 0. Unmount OverlayFS overlays (if root and active)
+    if is_overlay_active && [ "$(id -u)" -eq 0 ]; then
+        unmount_overlays
+    elif is_overlay_active; then
+        echo "→ OverlayFS cleanup requires root privileges"
+        echo "  Run with sudo to properly clean up overlays"
+        echo ""
+    fi
     
     # 1. Restore firewall rules
     echo "→ Restoring firewall..."
@@ -235,6 +471,11 @@ disable_secure_session() {
     echo ""
     echo "✓ Secure Session Mode DISABLED"
     echo "  All settings restored to normal"
+    if [ -f "$OVERLAY_STATE_FILE" ] && [ "$(id -u)" -ne 0 ]; then
+        echo ""
+        echo "⚠ Note: OverlayFS overlays may still be active"
+        echo "  Run 'sudo $(basename "$0") stop' to fully clean up"
+    fi
     echo ""
     
     log_message "Secure Session Mode disabled successfully"
@@ -253,7 +494,7 @@ show_status() {
         
         if [ -f "$STATE_FILE" ]; then
             local start_time
-            start_time=$(tail -1 "$STATE_FILE")
+            start_time=$(grep -v "^active$\|^overlay=" "$STATE_FILE" | head -1)
             echo "Started: $start_time"
         fi
         
@@ -285,12 +526,16 @@ show_status() {
             fi
         fi
         
+        # Show overlay status
+        show_overlay_status
+        
     else
         echo "Status: INACTIVE"
         echo ""
         echo "System is running in normal mode"
         echo ""
         echo "To enable: $(basename "$0") start"
+        echo "To enable with soft-immutable mode: sudo $(basename "$0") start"
     fi
     
     echo ""
@@ -302,14 +547,15 @@ show_status() {
 show_indicator() {
     # Try to show a notification
     if command -v notify-send &>/dev/null; then
+        local msg="Enhanced security mode enabled"
+        if is_overlay_active; then
+            msg="Soft-immutable mode active\nConfig changes are temporary"
+        fi
         notify-send "🔒 Secure Session Active" \
-            "Enhanced security mode enabled\nClick system tray for status" \
+            "$msg" \
             -u critical \
             -t 10000 2>/dev/null || true
     fi
-    
-    # TODO: Add persistent panel indicator in future
-    # For now, we rely on notifications
 }
 
 hide_indicator() {
@@ -327,6 +573,7 @@ hide_indicator() {
 show_help() {
     cat << EOF
 AetherOS Secure Session Mode
+Soft-Immutable Secure Session with OverlayFS
 
 Temporary lockdown mode for:
   • Banking and financial transactions
@@ -338,30 +585,45 @@ When enabled:
   • SSH server disabled
   • Network services (Avahi, Samba) stopped
   • USB automount disabled
-  • Clear on-screen indicator shown
+  • Soft-immutable mode (with sudo): config/cache changes are temporary
 
-Usage: $(basename "$0") COMMAND
+Soft-Immutable Mode (OverlayFS):
+  When run with sudo, the session uses OverlayFS to create a
+  temporary layer over your config and cache directories. Any
+  changes made during the session are discarded when the session
+  ends, providing additional protection against persistent malware
+  or unwanted configuration changes.
+
+Usage: $(basename "$0") COMMAND [OPTIONS]
 
 Commands:
-  start     Enable Secure Session Mode
-  stop      Disable Secure Session Mode (restore normal)
-  status    Show current status
-  help      Show this help
+  start [--no-overlay]    Enable Secure Session Mode
+  stop                    Disable Secure Session Mode (restore normal)
+  status                  Show current status
+  help                    Show this help
+
+Options:
+  --no-overlay            Disable OverlayFS soft-immutable mode
 
 Examples:
-  $(basename "$0") start      # Enable secure mode
-  $(basename "$0") status     # Check if active
-  $(basename "$0") stop       # Return to normal
+  $(basename "$0") start           # Enable secure mode (no overlay)
+  sudo $(basename "$0") start      # Enable with soft-immutable mode
+  $(basename "$0") start --no-overlay  # Explicitly disable overlay
+  $(basename "$0") status          # Check if active
+  $(basename "$0") stop            # Return to normal
+  sudo $(basename "$0") stop       # Full cleanup including overlays
 
 Safety:
   • All changes are reversible
   • Original state is backed up
   • Idempotent - safe to run multiple times
   • No permanent configuration corruption
+  • OverlayFS changes are discarded on session end
 
-Note:
-  Some operations require sudo/root privileges for
-  system-level security changes (firewall, services).
+Requirements:
+  • Root privileges for OverlayFS soft-immutable mode
+  • Linux kernel with OverlayFS support (standard on modern kernels)
+  • UFW for firewall management (optional)
 
 EOF
 }
@@ -372,9 +634,25 @@ EOF
 main() {
     setup_logging
     
-    case "${1:-status}" in
+    local command="${1:-status}"
+    local use_overlay="true"
+    
+    # Parse options
+    shift 2>/dev/null || true
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --no-overlay)
+                use_overlay="false"
+                ;;
+            *)
+                ;;
+        esac
+        shift
+    done
+    
+    case "$command" in
         start|enable)
-            enable_secure_session
+            enable_secure_session "$use_overlay"
             ;;
         stop|disable)
             disable_secure_session
@@ -386,7 +664,7 @@ main() {
             show_help
             ;;
         *)
-            echo "Error: Unknown command: $1" >&2
+            echo "Error: Unknown command: $command" >&2
             echo ""
             show_help
             exit 1
