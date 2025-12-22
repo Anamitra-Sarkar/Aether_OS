@@ -373,7 +373,8 @@ process_coredump() {
     else
         # Try newest core in systemd coredump directory
         local latest_core
-        latest_core=$(ls -t "${COREDUMP_DIR}"/core.* 2>/dev/null | head -1 || true)
+        latest_core=$(find "${COREDUMP_DIR}" -maxdepth 1 -name 'core.*' -printf '%T@ %f\n' 2>/dev/null | sort -nr | head -1 | awk '{print $2}' || true)
+        [[ -n "$latest_core" ]] && latest_core="${COREDUMP_DIR}/${latest_core}"
         if [[ -n "$latest_core" ]]; then
             local core_name
             core_name=$(basename "$latest_core")

@@ -96,7 +96,17 @@ dependency_safe_to_disable() {
             PROTECTED_DEP_CACHE[$protected]="$deps"
         fi
 
-        if printf '%s\n' "$deps" | tr -s ' ' | cut -d' ' -f1 | grep -Fx "$candidate" >/dev/null; then
+        local matched=false
+        while IFS= read -r dep; do
+            dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [[ -z "$dep" ]] && continue
+            if [[ "$dep" == "$candidate" ]]; then
+                matched=true
+                break
+            fi
+        done <<< "$deps"
+
+        if [[ "$matched" == "true" ]]; then
             log_warn "Protected service $protected depends on $candidate; skipping."
             return 1
         fi
