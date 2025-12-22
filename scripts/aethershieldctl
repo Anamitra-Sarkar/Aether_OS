@@ -26,14 +26,13 @@ fi
 # =============================================================================
 # Safety: Abort on failure with cleanup
 # =============================================================================
+# Cleanup is handled by trap - we only need to trap for ERR cases
+# since EXIT runs on every exit. We'll use ERR trap for unexpected failures.
 cleanup_on_error() {
     local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        log_error "Operation failed with exit code $exit_code. Aborting safely."
-    fi
-    exit $exit_code
+    log_error "Operation failed with exit code $exit_code. Aborting safely."
 }
-trap cleanup_on_error EXIT
+trap cleanup_on_error ERR
 
 # =============================================================================
 # Logging
@@ -525,11 +524,13 @@ install_apparmor_profile() {
     log_message "AppArmor profile written to: $profile_file"
     
     # Load profile
-    if apparmor_parser -r "$profile_file" 2>&1; then
+    local load_output
+    if load_output=$(apparmor_parser -r "$profile_file" 2>&1); then
         log_message "AppArmor profile loaded for: $app_id"
         return 0
     else
         log_error "Failed to load AppArmor profile for: $app_id"
+        log_error "AppArmor error: $load_output"
         return 1
     fi
 }

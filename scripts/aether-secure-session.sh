@@ -28,16 +28,14 @@ OVERLAY_MOUNTS_FILE="$CONFIG_DIR/.overlay-mounts"
 # =============================================================================
 cleanup_on_error() {
     local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        log_error "Operation failed with exit code $exit_code. Attempting safe cleanup."
-        # Attempt to unmount any overlays on failure
-        if [ -f "$OVERLAY_MOUNTS_FILE" ]; then
-            unmount_overlays || true
-        fi
+    log_error "Operation failed with exit code $exit_code. Attempting safe cleanup."
+    # Attempt to unmount any overlays on failure
+    if [ -f "$OVERLAY_MOUNTS_FILE" ] && [ "$(id -u)" -eq 0 ]; then
+        unmount_overlays || true
     fi
-    exit $exit_code
 }
-trap cleanup_on_error EXIT
+# Only trap ERR for unexpected failures, not normal exits
+trap cleanup_on_error ERR
 
 # =============================================================================
 # Logging
@@ -191,17 +189,26 @@ unmount_overlays() {
         return 0
     fi
     
-    local unmount_count=0
+    # Read mounts file into array (reverse order for unmounting)
+    local -a mounts=()
+    while IFS= read -r line; do
+        mounts+=("$line")
+    done < "$OVERLAY_MOUNTS_FILE"
     
     # Unmount in reverse order
-    tac "$OVERLAY_MOUNTS_FILE" 2>/dev/null | while IFS=':' read -r mount_name target_dir merged_dir; do
+    local i
+    for (( i=${#mounts[@]}-1; i>=0; i-- )); do
+        local mount_info="${mounts[$i]}"
+        local mount_name target_dir merged_dir
+        IFS=':' read -r mount_name target_dir merged_dir <<< "$mount_info"
+        
         if [ -n "$merged_dir" ] && mountpoint -q "$merged_dir" 2>/dev/null; then
             echo "  → Unmounting: $merged_dir"
-            if umount "$merged_dir" 2>&1; then
+            local umount_output
+            if umount_output=$(umount "$merged_dir" 2>&1); then
                 log_message "Overlay unmounted: $merged_dir"
-                unmount_count=$((unmount_count + 1))
             else
-                log_error "Failed to unmount: $merged_dir"
+                log_error "Failed to unmount: $merged_dir - $umount_output"
                 # Try lazy unmount as fallback
                 umount -l "$merged_dir" 2>/dev/null || true
             fi
@@ -637,14 +644,19 @@ main() {
     local command="${1:-status}"
     local use_overlay="true"
     
-    # Parse options
-    shift 2>/dev/null || true
+    # Shift to get remaining arguments if we have a command
+    if [ $# -gt 0 ]; then
+        shift
+    fi
+    
+    # Parse remaining options
     while [ $# -gt 0 ]; do
         case "$1" in
             --no-overlay)
                 use_overlay="false"
                 ;;
             *)
+                # Ignore unknown options
                 ;;
         esac
         shift
