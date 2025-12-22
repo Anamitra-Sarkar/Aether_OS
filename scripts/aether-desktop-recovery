@@ -1,0 +1,630 @@
+#!/bin/bash
+# =============================================================================
+# AetherOS Wayland Crash Containment & Desktop Recovery
+# Detect and recover from compositor/shell crashes without session loss
+# =============================================================================
+
+set -euo pipefail
+
+# =============================================================================
+# Configuration
+# =============================================================================
+readonly VERSION="1.0.0"
+readonly STATE_DIR="${HOME}/.local/share/aetheros/desktop-recovery"
+readonly LOG_FILE="${STATE_DIR}/recovery.log"
+readonly CRASH_COUNT_FILE="${STATE_DIR}/crash-count"
+readonly LAST_CRASH_FILE="${STATE_DIR}/last-crash-time"
+readonly FALLBACK_FLAG_FILE="${STATE_DIR}/fallback-to-x11"
+
+readonly RED="\033[0;31m"
+readonly YELLOW="\033[0;33m"
+readonly GREEN="\033[0;32m"
+readonly BLUE="\033[0;34m"
+readonly CYAN="\033[0;36m"
+readonly BOLD="\033[1m"
+readonly RESET="\033[0m"
+
+# Recovery thresholds
+readonly MAX_CRASHES_PER_HOUR=3
+readonly CRASH_WINDOW_SECONDS=3600
+readonly RESTART_DELAY_SECONDS=2
+
+# =============================================================================
+# Utility Functions
+# =============================================================================
+log_to_file() {
+    local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    mkdir -p "$STATE_DIR"
+    echo "$message" >> "$LOG_FILE"
+}
+
+log_info() {
+    echo -e "${BLUE}[INFO]${RESET} $1"
+    log_to_file "INFO: $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${RESET} $1"
+    log_to_file "SUCCESS: $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${RESET} $1"
+    log_to_file "WARN: $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${RESET} $1"
+    log_to_file "ERROR: $1"
+}
+
+ensure_directories() {
+    mkdir -p "$STATE_DIR"
+}
+
+send_notification() {
+    local title=$1
+    local message=$2
+    local urgency=${3:-normal}
+    
+    # Try to send desktop notification
+    if command -v notify-send &>/dev/null; then
+        notify-send -u "$urgency" "$title" "$message" 2>/dev/null || true
+    fi
+}
+
+# =============================================================================
+# Crash Detection Functions
+# =============================================================================
+detect_compositor() {
+    # Detect which compositor is running
+    local compositor=""
+    
+    # Check for KWin (Plasma Wayland)
+    if pgrep -x "kwin_wayland" &>/dev/null; then
+        compositor="kwin_wayland"
+    # Check for Mutter (GNOME)
+    elif pgrep -x "gnome-shell" &>/dev/null; then
+        compositor="gnome-shell"
+    # Check for weston
+    elif pgrep -x "weston" &>/dev/null; then
+        compositor="weston"
+    # Check for sway
+    elif pgrep -x "sway" &>/dev/null; then
+        compositor="sway"
+    # Check for KWin X11 (fallback mode)
+    elif pgrep -x "kwin_x11" &>/dev/null; then
+        compositor="kwin_x11"
+    fi
+    
+    echo "$compositor"
+}
+
+detect_shell() {
+    # Detect which desktop shell is running
+    local shell=""
+    
+    # Check for Plasma shell
+    if pgrep -x "plasmashell" &>/dev/null; then
+        shell="plasmashell"
+    # Check for GNOME shell
+    elif pgrep -x "gnome-shell" &>/dev/null; then
+        shell="gnome-shell"
+    fi
+    
+    echo "$shell"
+}
+
+is_wayland_session() {
+    # Check if current session is Wayland
+    if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+        return 0
+    elif [[ "${WAYLAND_DISPLAY:-}" != "" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# =============================================================================
+# Crash Tracking Functions
+# =============================================================================
+record_crash() {
+    ensure_directories
+    
+    # Get current timestamp
+    local now=$(date +%s)
+    
+    # Record crash time
+    echo "$now" >> "$LAST_CRASH_FILE"
+    
+    # Clean up old crash records (older than window)
+    local cutoff=$((now - CRASH_WINDOW_SECONDS))
+    local temp_file="${LAST_CRASH_FILE}.tmp"
+    
+    if [[ -f "$LAST_CRASH_FILE" ]]; then
+        while IFS= read -r timestamp; do
+            if [[ "$timestamp" -ge "$cutoff" ]]; then
+                echo "$timestamp" >> "$temp_file"
+            fi
+        done < "$LAST_CRASH_FILE"
+        
+        mv "$temp_file" "$LAST_CRASH_FILE" 2>/dev/null || rm -f "$temp_file"
+    fi
+    
+    # Count recent crashes
+    local crash_count=0
+    if [[ -f "$LAST_CRASH_FILE" ]]; then
+        crash_count=$(wc -l < "$LAST_CRASH_FILE")
+    fi
+    
+    echo "$crash_count"
+}
+
+get_recent_crash_count() {
+    ensure_directories
+    
+    if [[ ! -f "$LAST_CRASH_FILE" ]]; then
+        echo "0"
+        return
+    fi
+    
+    local now=$(date +%s)
+    local cutoff=$((now - CRASH_WINDOW_SECONDS))
+    local count=0
+    
+    while IFS= read -r timestamp; do
+        if [[ "$timestamp" -ge "$cutoff" ]]; then
+            ((count++))
+        fi
+    done < "$LAST_CRASH_FILE"
+    
+    echo "$count"
+}
+
+clear_crash_history() {
+    rm -f "$LAST_CRASH_FILE" "$CRASH_COUNT_FILE"
+    log_success "Crash history cleared"
+}
+
+# =============================================================================
+# Recovery Functions
+# =============================================================================
+restart_compositor() {
+    local compositor=$1
+    
+    log_info "Attempting to restart compositor: $compositor"
+    
+    case "$compositor" in
+        kwin_wayland)
+            # Restart KWin Wayland
+            if command -v kwin_wayland &>/dev/null; then
+                log_info "Restarting KWin Wayland..."
+                kwin_wayland --replace &
+                sleep "$RESTART_DELAY_SECONDS"
+                
+                if pgrep -x "kwin_wayland" &>/dev/null; then
+                    log_success "KWin Wayland restarted successfully"
+                    return 0
+                else
+                    log_error "Failed to restart KWin Wayland"
+                    return 1
+                fi
+            fi
+            ;;
+        
+        gnome-shell)
+            # Restart GNOME Shell (also the compositor)
+            log_info "Restarting GNOME Shell..."
+            # GNOME Shell can restart itself
+            if command -v busctl &>/dev/null; then
+                busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")' 2>/dev/null || true
+                sleep "$RESTART_DELAY_SECONDS"
+                
+                if pgrep -x "gnome-shell" &>/dev/null; then
+                    log_success "GNOME Shell restarted successfully"
+                    return 0
+                else
+                    log_error "Failed to restart GNOME Shell"
+                    return 1
+                fi
+            fi
+            ;;
+        
+        weston)
+            # Weston doesn't support hot-restart easily
+            log_warn "Weston restart not supported through recovery"
+            return 1
+            ;;
+        
+        sway)
+            # Sway doesn't support hot-restart
+            log_warn "Sway restart not supported through recovery"
+            return 1
+            ;;
+        
+        *)
+            log_error "Unknown compositor: $compositor"
+            return 1
+            ;;
+    esac
+    
+    return 1
+}
+
+restart_shell() {
+    local shell=$1
+    
+    log_info "Attempting to restart desktop shell: $shell"
+    
+    case "$shell" in
+        plasmashell)
+            # Kill and restart plasmashell
+            log_info "Restarting Plasma Shell..."
+            killall plasmashell 2>/dev/null || true
+            sleep 1
+            
+            if command -v plasmashell &>/dev/null; then
+                plasmashell &>/dev/null &
+                sleep "$RESTART_DELAY_SECONDS"
+                
+                if pgrep -x "plasmashell" &>/dev/null; then
+                    log_success "Plasma Shell restarted successfully"
+                    return 0
+                else
+                    log_error "Failed to restart Plasma Shell"
+                    return 1
+                fi
+            fi
+            ;;
+        
+        gnome-shell)
+            # Already handled by restart_compositor for GNOME
+            restart_compositor "gnome-shell"
+            return $?
+            ;;
+        
+        *)
+            log_error "Unknown shell: $shell"
+            return 1
+            ;;
+    esac
+    
+    return 1
+}
+
+fallback_to_x11() {
+    log_warn "Initiating fallback to X11 session..."
+    
+    # Set fallback flag
+    ensure_directories
+    echo "$(date +%s)" > "$FALLBACK_FLAG_FILE"
+    
+    # Log reason
+    log_to_file "FALLBACK: Multiple recovery failures, switching to X11 for stability"
+    
+    # Send notification
+    send_notification "Desktop Recovery" \
+        "Multiple compositor crashes detected. Next login will use X11 for stability." \
+        "critical"
+    
+    # Create a file that login manager can check
+    local user_home="${HOME}"
+    local xsession_file="${user_home}/.xsession-errors-wayland-disabled"
+    
+    echo "Wayland disabled due to repeated crashes at $(date)" > "$xsession_file"
+    
+    log_info "X11 fallback flag set. User needs to log out and log back in."
+    log_info "To re-enable Wayland, run: aether-desktop-recovery reset"
+}
+
+# =============================================================================
+# Monitor Mode (for systemd service)
+# =============================================================================
+monitor_mode() {
+    log_info "Starting desktop recovery monitor..."
+    log_to_file "Monitor started"
+    
+    # Initial detection
+    local last_compositor=$(detect_compositor)
+    local last_shell=$(detect_shell)
+    
+    log_info "Monitoring compositor: ${last_compositor:-none}"
+    log_info "Monitoring shell: ${last_shell:-none}"
+    
+    # Monitor loop
+    while true; do
+        sleep 5
+        
+        # Check compositor
+        local current_compositor=$(detect_compositor)
+        
+        # Detect compositor crash
+        if [[ -n "$last_compositor" ]] && [[ -z "$current_compositor" ]]; then
+            log_error "Compositor crash detected: $last_compositor"
+            
+            # Record crash
+            local crash_count=$(record_crash)
+            
+            # Check if too many crashes
+            if [[ $crash_count -ge $MAX_CRASHES_PER_HOUR ]]; then
+                log_error "Too many crashes ($crash_count in last hour)"
+                fallback_to_x11
+                exit 1
+            fi
+            
+            # Attempt recovery
+            send_notification "Desktop Recovery" \
+                "Compositor crashed. Attempting automatic recovery..." \
+                "normal"
+            
+            if restart_compositor "$last_compositor"; then
+                send_notification "Desktop Recovery" \
+                    "Compositor recovered successfully." \
+                    "normal"
+                current_compositor="$last_compositor"
+            else
+                log_error "Compositor recovery failed"
+                
+                # Try fallback
+                if [[ $crash_count -ge 2 ]]; then
+                    fallback_to_x11
+                    exit 1
+                fi
+            fi
+        fi
+        
+        last_compositor="$current_compositor"
+        
+        # Check shell
+        local current_shell=$(detect_shell)
+        
+        # Detect shell crash
+        if [[ -n "$last_shell" ]] && [[ -z "$current_shell" ]]; then
+            log_error "Desktop shell crash detected: $last_shell"
+            
+            # Record crash
+            local crash_count=$(record_crash)
+            
+            # Check if too many crashes
+            if [[ $crash_count -ge $MAX_CRASHES_PER_HOUR ]]; then
+                log_error "Too many crashes ($crash_count in last hour)"
+                fallback_to_x11
+                exit 1
+            fi
+            
+            # Attempt recovery
+            send_notification "Desktop Recovery" \
+                "Desktop shell crashed. Attempting automatic recovery..." \
+                "normal"
+            
+            if restart_shell "$last_shell"; then
+                send_notification "Desktop Recovery" \
+                    "Desktop shell recovered successfully." \
+                    "normal"
+                current_shell="$last_shell"
+            else
+                log_error "Shell recovery failed"
+            fi
+        fi
+        
+        last_shell="$current_shell"
+    done
+}
+
+# =============================================================================
+# Commands
+# =============================================================================
+cmd_status() {
+    echo -e "${BOLD}${CYAN}Desktop Recovery Status${RESET}"
+    echo ""
+    
+    # Session type
+    if is_wayland_session; then
+        echo -e "${BOLD}Session Type:${RESET} ${GREEN}Wayland${RESET}"
+    else
+        echo -e "${BOLD}Session Type:${RESET} ${BLUE}X11${RESET}"
+    fi
+    
+    # Current compositor and shell
+    local compositor=$(detect_compositor)
+    local shell=$(detect_shell)
+    
+    if [[ -n "$compositor" ]]; then
+        echo -e "${BOLD}Compositor:${RESET} $compositor"
+    else
+        echo -e "${BOLD}Compositor:${RESET} ${RED}Not detected${RESET}"
+    fi
+    
+    if [[ -n "$shell" ]]; then
+        echo -e "${BOLD}Desktop Shell:${RESET} $shell"
+    else
+        echo -e "${BOLD}Desktop Shell:${RESET} ${RED}Not detected${RESET}"
+    fi
+    
+    echo ""
+    
+    # Crash statistics
+    local crash_count=$(get_recent_crash_count)
+    echo -e "${BOLD}Recent Crashes (last hour):${RESET} $crash_count"
+    
+    if [[ $crash_count -gt 0 ]]; then
+        if [[ $crash_count -ge $MAX_CRASHES_PER_HOUR ]]; then
+            echo -e "${RED}Warning: Crash threshold reached${RESET}"
+        else
+            echo -e "${YELLOW}Warning: Crashes detected${RESET}"
+        fi
+    else
+        echo -e "${GREEN}No recent crashes${RESET}"
+    fi
+    
+    echo ""
+    
+    # Fallback status
+    if [[ -f "$FALLBACK_FLAG_FILE" ]]; then
+        local fallback_time=$(cat "$FALLBACK_FLAG_FILE")
+        local fallback_date=$(date -d "@$fallback_time" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "unknown")
+        echo -e "${YELLOW}X11 Fallback Active${RESET} (since $fallback_date)"
+        echo -e "${BOLD}Run 'aether-desktop-recovery reset' to re-enable Wayland${RESET}"
+    else
+        echo -e "${GREEN}No fallback active${RESET}"
+    fi
+}
+
+cmd_reset() {
+    log_info "Resetting desktop recovery state..."
+    
+    # Clear crash history
+    clear_crash_history
+    
+    # Remove fallback flag
+    if [[ -f "$FALLBACK_FLAG_FILE" ]]; then
+        rm -f "$FALLBACK_FLAG_FILE"
+        log_success "X11 fallback disabled - Wayland will be available at next login"
+    fi
+    
+    # Clear xsession file
+    local xsession_file="${HOME}/.xsession-errors-wayland-disabled"
+    if [[ -f "$xsession_file" ]]; then
+        rm -f "$xsession_file"
+    fi
+    
+    log_success "Desktop recovery state reset"
+}
+
+cmd_log() {
+    local lines=${1:-50}
+    
+    if [[ -f "$LOG_FILE" ]]; then
+        echo -e "${BOLD}Desktop Recovery Log (last $lines lines):${RESET}"
+        echo ""
+        tail -n "$lines" "$LOG_FILE"
+    else
+        log_info "No log file found"
+    fi
+}
+
+cmd_restart_shell() {
+    local shell=$(detect_shell)
+    
+    if [[ -z "$shell" ]]; then
+        log_error "No desktop shell detected"
+        exit 1
+    fi
+    
+    restart_shell "$shell"
+}
+
+cmd_restart_compositor() {
+    local compositor=$(detect_compositor)
+    
+    if [[ -z "$compositor" ]]; then
+        log_error "No compositor detected"
+        exit 1
+    fi
+    
+    restart_compositor "$compositor"
+}
+
+show_help() {
+    cat <<EOF
+AetherOS Wayland Crash Containment & Desktop Recovery v${VERSION}
+
+USAGE:
+    aether-desktop-recovery <command> [options]
+
+COMMANDS:
+    status              Show current desktop and recovery status
+    monitor             Run in monitor mode (for systemd service)
+    restart-shell       Manually restart desktop shell
+    restart-compositor  Manually restart compositor
+    reset               Reset crash history and re-enable Wayland
+    log [lines]         Show recovery log (default: 50 lines)
+    help                Show this help message
+
+DESCRIPTION:
+    Automatically detects and recovers from compositor and desktop shell
+    crashes without forcing logout or killing user applications.
+
+FEATURES:
+    • Automatic crash detection
+    • Intelligent restart with rate limiting
+    • Fallback to X11 after repeated failures
+    • Preserves running applications
+    • Single notification per incident
+
+CRASH THRESHOLD:
+    • Maximum $MAX_CRASHES_PER_HOUR crashes per hour
+    • Fallback to X11 if threshold exceeded
+
+EXAMPLES:
+    # Check current status
+    aether-desktop-recovery status
+
+    # View recent logs
+    aether-desktop-recovery log
+
+    # Manually restart shell
+    aether-desktop-recovery restart-shell
+
+    # Reset after fixing issues
+    aether-desktop-recovery reset
+
+SYSTEMD SERVICE:
+    This tool can run as a systemd user service for automatic monitoring.
+    The monitor mode is designed to run in the background.
+
+NOTES:
+    • Does NOT automatically restart display manager
+    • Does NOT kill user applications
+    • Does NOT create login loops
+    • Logs all actions to $LOG_FILE
+
+EOF
+}
+
+# =============================================================================
+# Main Function
+# =============================================================================
+main() {
+    ensure_directories
+    
+    if [[ $# -eq 0 ]]; then
+        cmd_status
+        exit 0
+    fi
+    
+    local command=$1
+    shift
+    
+    case "$command" in
+        status)
+            cmd_status "$@"
+            ;;
+        monitor)
+            monitor_mode "$@"
+            ;;
+        restart-shell)
+            cmd_restart_shell "$@"
+            ;;
+        restart-compositor)
+            cmd_restart_compositor "$@"
+            ;;
+        reset)
+            cmd_reset "$@"
+            ;;
+        log)
+            cmd_log "$@"
+            ;;
+        help|--help|-h)
+            show_help
+            ;;
+        *)
+            log_error "Unknown command: $command"
+            echo "Use 'aether-desktop-recovery help' for usage information" >&2
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

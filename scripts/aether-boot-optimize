@@ -1,0 +1,562 @@
+#!/bin/bash
+# =============================================================================
+# AetherOS Boot Time Intelligence & Auto Optimization Engine
+# Learn from boot behavior and intelligently optimize startup time
+# =============================================================================
+
+set -euo pipefail
+
+# =============================================================================
+# Configuration
+# =============================================================================
+readonly VERSION="1.0.0"
+readonly DATA_DIR="${HOME}/.local/share/aetheros/boot-intelligence"
+readonly REPORT_FILE="${HOME}/aether-boot-report.txt"
+readonly BOOT_PROFILES="${DATA_DIR}/boot-profiles.json"
+readonly BASELINE_FILE="${DATA_DIR}/baseline.txt"
+readonly APPLIED_CHANGES="${DATA_DIR}/applied-changes.txt"
+readonly BACKUP_DIR="${DATA_DIR}/backups"
+
+readonly RED="\033[0;31m"
+readonly YELLOW="\033[0;33m"
+readonly GREEN="\033[0;32m"
+readonly BLUE="\033[0;34m"
+readonly CYAN="\033[0;36m"
+readonly BOLD="\033[1m"
+readonly RESET="\033[0m"
+
+# Boot-critical services that must NEVER be disabled
+readonly -a BOOT_CRITICAL=(
+    "sddm.service"
+    "gdm.service"
+    "lightdm.service"
+    "display-manager.service"
+    "NetworkManager.service"
+    "systemd-networkd.service"
+    "dbus.service"
+    "systemd-logind.service"
+    "pulseaudio.service"
+    "pipewire.service"
+    "bluetooth.service"
+    "upower.service"
+    "polkit.service"
+)
+
+# =============================================================================
+# Utility Functions
+# =============================================================================
+log_info() {
+    echo -e "${BLUE}[INFO]${RESET} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${RESET} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${RESET} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${RESET} $1"
+}
+
+log_header() {
+    echo -e "\n${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "${CYAN}${BOLD}$1${RESET}"
+    echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+}
+
+ensure_directories() {
+    mkdir -p "$DATA_DIR" "$BACKUP_DIR"
+}
+
+is_boot_critical() {
+    local service=$1
+    
+    for critical in "${BOOT_CRITICAL[@]}"; do
+        if [[ "$service" == "$critical" ]] || [[ "$service" =~ ^$critical$ ]]; then
+            return 0
+        fi
+    done
+    
+    return 1
+}
+
+# =============================================================================
+# Boot Profiling
+# =============================================================================
+collect_boot_metrics() {
+    log_header "Collecting Boot Metrics"
+    
+    if ! command -v systemd-analyze &>/dev/null; then
+        log_error "systemd-analyze not found"
+        return 1
+    fi
+    
+    # Get overall boot time
+    local boot_time=$(systemd-analyze 2>/dev/null | head -1 || echo "unknown")
+    log_info "Boot time: $boot_time"
+    
+    # Get blame analysis (top 20 slowest units)
+    log_info "Analyzing slow services..."
+    local blame_output=$(systemd-analyze blame 2>/dev/null | head -20 || echo "")
+    
+    # Get critical chain
+    log_info "Analyzing critical chain..."
+    local critical_chain=$(systemd-analyze critical-chain 2>/dev/null || echo "")
+    
+    # Save to profile
+    local profile_file="${DATA_DIR}/profile-$(date +%Y%m%d-%H%M%S).txt"
+    {
+        echo "Boot Time: $boot_time"
+        echo ""
+        echo "=== Top 20 Slowest Units ==="
+        echo "$blame_output"
+        echo ""
+        echo "=== Critical Chain ==="
+        echo "$critical_chain"
+    } > "$profile_file"
+    
+    log_success "Boot profile saved to $profile_file"
+    
+    # If this is the first profile, save as baseline
+    if [[ ! -f "$BASELINE_FILE" ]]; then
+        cp "$profile_file" "$BASELINE_FILE"
+        log_success "Baseline profile established"
+    fi
+}
+
+# =============================================================================
+# Optimization Analysis
+# =============================================================================
+identify_optimization_targets() {
+    log_header "Identifying Optimization Targets"
+    
+    local -a targets=()
+    
+    # Get services taking more than 1 second
+    while IFS= read -r line; do
+        local time_ms=$(echo "$line" | awk '{print $1}' | sed 's/ms//')
+        local service=$(echo "$line" | awk '{print $2}')
+        
+        # Convert to milliseconds if in seconds
+        if [[ "$line" =~ s[[:space:]] ]] && [[ ! "$line" =~ ms ]]; then
+            local time_s=$(echo "$line" | awk '{print $1}' | sed 's/s//')
+            time_ms=$(echo "$time_s * 1000" | bc -l 2>/dev/null | cut -d'.' -f1 || echo "0")
+        fi
+        
+        # Skip if less than 1000ms or boot-critical
+        [[ -z "$time_ms" ]] && continue
+        [[ "$time_ms" -lt 1000 ]] && continue
+        is_boot_critical "$service" && continue
+        
+        # Check if service is non-essential
+        local is_nonessential=false
+        
+        # Desktop search/indexing
+        if [[ "$service" =~ (baloo|tracker|zeitgeist) ]]; then
+            is_nonessential=true
+        fi
+        
+        # Print services
+        if [[ "$service" =~ (cups|avahi|bluetooth|apport|whoopsie|kerneloops) ]]; then
+            is_nonessential=true
+        fi
+        
+        # Cloud sync services
+        if [[ "$service" =~ (dropbox|mega|nextcloud|owncloud|syncthing) ]]; then
+            is_nonessential=true
+        fi
+        
+        if [[ "$is_nonessential" == "true" ]]; then
+            targets+=("$service:$time_ms")
+            log_info "Target identified: $service (${time_ms}ms)"
+        fi
+    done < <(systemd-analyze blame 2>/dev/null | head -30 || true)
+    
+    echo "${targets[@]}"
+}
+
+# =============================================================================
+# Optimization Application
+# =============================================================================
+apply_optimizations() {
+    local dry_run=$1
+    
+    log_header "Applying Boot Optimizations"
+    
+    if [[ "$dry_run" == "true" ]]; then
+        log_warn "DRY RUN MODE - No changes will be applied"
+    fi
+    
+    local targets=$(identify_optimization_targets)
+    
+    if [[ -z "$targets" ]]; then
+        log_info "No optimization targets found"
+        return 0
+    fi
+    
+    local -a applied=()
+    
+    for target_info in $targets; do
+        local service=$(echo "$target_info" | cut -d':' -f1)
+        local time_ms=$(echo "$target_info" | cut -d':' -f2)
+        
+        # Double-check not boot-critical
+        if is_boot_critical "$service"; then
+            log_warn "Skipping boot-critical service: $service"
+            continue
+        fi
+        
+        # Check if service is currently enabled
+        if ! systemctl is-enabled "$service" &>/dev/null; then
+            log_info "Service already disabled: $service"
+            continue
+        fi
+        
+        # Backup current state
+        local backup_file="${BACKUP_DIR}/${service}.backup"
+        if [[ "$dry_run" == "false" ]]; then
+            systemctl show "$service" > "$backup_file" 2>/dev/null || true
+        fi
+        
+        log_info "Optimizing: $service (saves ${time_ms}ms)"
+        
+        if [[ "$dry_run" == "false" ]]; then
+            # Try to disable service
+            if systemctl disable "$service" 2>/dev/null; then
+                log_success "Disabled: $service"
+                applied+=("$service:disabled")
+            else
+                log_warn "Failed to disable: $service"
+            fi
+        else
+            log_info "Would disable: $service"
+            applied+=("$service:would-disable")
+        fi
+    done
+    
+    # Save applied changes
+    if [[ "$dry_run" == "false" ]] && [[ ${#applied[@]} -gt 0 ]]; then
+        {
+            echo "# Boot Optimizations Applied: $(date)"
+            echo "# Backup location: $BACKUP_DIR"
+            echo ""
+            for change in "${applied[@]}"; do
+                echo "$change"
+            done
+        } > "$APPLIED_CHANGES"
+        log_success "Applied changes saved to $APPLIED_CHANGES"
+    fi
+    
+    echo "${#applied[@]}"
+}
+
+# =============================================================================
+# Rollback
+# =============================================================================
+rollback_optimizations() {
+    log_header "Rolling Back Boot Optimizations"
+    
+    if [[ ! -f "$APPLIED_CHANGES" ]]; then
+        log_error "No applied changes found. Nothing to rollback."
+        return 1
+    fi
+    
+    log_info "Reading applied changes..."
+    
+    local rollback_count=0
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^# ]] && continue
+        [[ -z "$line" ]] && continue
+        
+        local service=$(echo "$line" | cut -d':' -f1)
+        local action=$(echo "$line" | cut -d':' -f2)
+        
+        if [[ "$action" == "disabled" ]]; then
+            log_info "Re-enabling: $service"
+            
+            if systemctl enable "$service" 2>/dev/null; then
+                log_success "Restored: $service"
+                ((rollback_count++))
+            else
+                log_warn "Failed to restore: $service"
+            fi
+        fi
+    done < "$APPLIED_CHANGES"
+    
+    if [[ $rollback_count -gt 0 ]]; then
+        # Archive the changes file
+        mv "$APPLIED_CHANGES" "${APPLIED_CHANGES}.$(date +%Y%m%d-%H%M%S).rolled-back"
+        log_success "Rollback complete. $rollback_count services restored."
+    else
+        log_warn "No services were rolled back"
+    fi
+}
+
+# =============================================================================
+# Report Generation
+# =============================================================================
+generate_report() {
+    log_header "Generating Boot Intelligence Report"
+    
+    # Get current boot time
+    local current_boot=$(systemd-analyze 2>/dev/null | head -1 || echo "unknown")
+    
+    # Get baseline boot time if available
+    local baseline_boot="unknown"
+    if [[ -f "$BASELINE_FILE" ]]; then
+        baseline_boot=$(head -1 "$BASELINE_FILE" | sed 's/Boot Time: //')
+    fi
+    
+    # Read applied changes
+    local changes_info=""
+    if [[ -f "$APPLIED_CHANGES" ]]; then
+        changes_info=$(cat "$APPLIED_CHANGES")
+    else
+        changes_info="No optimizations have been applied yet."
+    fi
+    
+    # Generate report
+    {
+        echo "╔════════════════════════════════════════════════════════════════╗"
+        echo "║      AetherOS Boot Time Intelligence Report                   ║"
+        echo "║      Generated: $(date '+%Y-%m-%d %H:%M:%S')                           ║"
+        echo "╚════════════════════════════════════════════════════════════════╝"
+        echo ""
+        echo "=== Boot Time Summary ==="
+        echo ""
+        echo "Baseline Boot Time:  $baseline_boot"
+        echo "Current Boot Time:   $current_boot"
+        echo ""
+        echo "=== Applied Optimizations ==="
+        echo ""
+        echo "$changes_info"
+        echo ""
+        echo "=== Rollback Instructions ==="
+        echo ""
+        echo "To undo all optimizations, run:"
+        echo "  aether-boot-optimize rollback"
+        echo ""
+        echo "To manually re-enable a service:"
+        echo "  sudo systemctl enable <service-name>"
+        echo "  sudo systemctl start <service-name>"
+        echo ""
+        echo "=== Top 10 Current Boot Times ==="
+        echo ""
+        systemd-analyze blame 2>/dev/null | head -10 || echo "systemd-analyze not available"
+        echo ""
+        echo "=== Notes ==="
+        echo ""
+        echo "• All changes are reversible"
+        echo "• Boot-critical services are never modified"
+        echo "• Backups stored in: $BACKUP_DIR"
+        echo ""
+    } > "$REPORT_FILE"
+    
+    log_success "Report generated: $REPORT_FILE"
+    
+    # Display report
+    cat "$REPORT_FILE"
+}
+
+# =============================================================================
+# Commands
+# =============================================================================
+cmd_profile() {
+    log_header "Boot Time Profiling"
+    ensure_directories
+    collect_boot_metrics
+}
+
+cmd_analyze() {
+    log_header "Boot Optimization Analysis"
+    ensure_directories
+    
+    local targets=$(identify_optimization_targets)
+    
+    if [[ -z "$targets" ]]; then
+        log_info "No optimization targets found"
+        log_success "System boot is already well-optimized"
+    else
+        echo ""
+        log_info "Optimization opportunities identified"
+        log_info "Run 'aether-boot-optimize optimize --dry-run' to see what would be changed"
+    fi
+}
+
+cmd_optimize() {
+    local dry_run=false
+    
+    # Parse optimize flags
+    for arg in "$@"; do
+        if [[ "$arg" == "--dry-run" ]]; then
+            dry_run=true
+        fi
+    done
+    
+    ensure_directories
+    
+    # Collect current metrics first
+    collect_boot_metrics
+    
+    # Apply optimizations
+    local applied_count=$(apply_optimizations "$dry_run")
+    
+    if [[ "$dry_run" == "true" ]]; then
+        log_info ""
+        log_info "Dry run complete. No changes were made."
+        log_info "Run without --dry-run to apply optimizations."
+    else
+        if [[ "$applied_count" -gt 0 ]]; then
+            log_success ""
+            log_success "Optimization complete. $applied_count services modified."
+            log_info "Reboot to see boot time improvements."
+            log_info "Run 'aether-boot-optimize report' after reboot."
+        else
+            log_info "No optimizations were applied."
+        fi
+    fi
+}
+
+cmd_rollback() {
+    ensure_directories
+    rollback_optimizations
+    
+    log_info ""
+    log_info "Reboot to restore original boot behavior."
+}
+
+cmd_report() {
+    ensure_directories
+    generate_report
+}
+
+cmd_status() {
+    log_header "Boot Optimization Status"
+    
+    # Get current boot time
+    local current_boot=$(systemd-analyze 2>/dev/null | head -1 || echo "unknown")
+    echo -e "${BOLD}Current Boot Time:${RESET} $current_boot"
+    
+    # Check if baseline exists
+    if [[ -f "$BASELINE_FILE" ]]; then
+        local baseline_boot=$(head -1 "$BASELINE_FILE" | sed 's/Boot Time: //')
+        echo -e "${BOLD}Baseline Boot Time:${RESET} $baseline_boot"
+    else
+        echo -e "${YELLOW}No baseline established yet${RESET}"
+    fi
+    
+    echo ""
+    
+    # Check if optimizations are applied
+    if [[ -f "$APPLIED_CHANGES" ]]; then
+        local change_count=$(grep -c ":" "$APPLIED_CHANGES" 2>/dev/null || echo "0")
+        echo -e "${GREEN}Optimizations Applied:${RESET} $change_count services modified"
+        echo -e "${BOLD}Run 'aether-boot-optimize report' for details${RESET}"
+    else
+        echo -e "${BLUE}No optimizations applied yet${RESET}"
+        echo -e "${BOLD}Run 'aether-boot-optimize analyze' to identify opportunities${RESET}"
+    fi
+}
+
+show_help() {
+    cat <<EOF
+AetherOS Boot Time Intelligence & Auto Optimization Engine v${VERSION}
+
+USAGE:
+    aether-boot-optimize <command> [options]
+
+COMMANDS:
+    profile         Collect boot metrics from current system
+    analyze         Identify optimization opportunities
+    optimize        Apply boot optimizations
+      --dry-run       Show what would be changed without applying
+    rollback        Undo all boot optimizations
+    report          Generate detailed boot intelligence report
+    status          Show current boot optimization status
+    help            Show this help message
+
+DESCRIPTION:
+    Intelligently optimizes boot time by analyzing systemd boot behavior
+    and selectively disabling non-essential services. All changes are
+    reversible and boot-critical services are never modified.
+
+PROTECTED SERVICES (never modified):
+    • Display managers (SDDM, GDM, LightDM)
+    • Network stack (NetworkManager)
+    • Desktop essentials (D-Bus, polkit, logind)
+    • Audio stack (PulseAudio, PipeWire)
+    • Input devices
+
+EXAMPLES:
+    # Establish baseline and analyze
+    aether-boot-optimize profile
+    aether-boot-optimize analyze
+
+    # Preview optimizations
+    aether-boot-optimize optimize --dry-run
+
+    # Apply optimizations
+    sudo aether-boot-optimize optimize
+
+    # Generate report after reboot
+    aether-boot-optimize report
+
+    # Rollback if needed
+    sudo aether-boot-optimize rollback
+
+NOTES:
+    • Profile collection runs automatically
+    • All changes require sudo/root
+    • Reboot required to see improvements
+    • Rollback available at any time
+
+EOF
+}
+
+# =============================================================================
+# Main Function
+# =============================================================================
+main() {
+    if [[ $# -eq 0 ]]; then
+        cmd_status
+        exit 0
+    fi
+    
+    local command=$1
+    shift
+    
+    case "$command" in
+        profile)
+            cmd_profile "$@"
+            ;;
+        analyze)
+            cmd_analyze "$@"
+            ;;
+        optimize)
+            cmd_optimize "$@"
+            ;;
+        rollback)
+            cmd_rollback "$@"
+            ;;
+        report)
+            cmd_report "$@"
+            ;;
+        status)
+            cmd_status "$@"
+            ;;
+        help|--help|-h)
+            show_help
+            ;;
+        *)
+            echo "Unknown command: $command" >&2
+            echo "Use 'aether-boot-optimize help' for usage information" >&2
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

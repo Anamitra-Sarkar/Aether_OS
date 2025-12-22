@@ -151,6 +151,28 @@ done
 
 echo ""
 
+# v2.3 Tools (Intelligence Systems)
+echo -e "${COLOR_YELLOW}Testing v2.3 Tools (Intelligence Systems)...${COLOR_RESET}"
+v23_tools=(
+    "aether-threat-scan"
+    "aether-boot-optimize"
+    "aether-cpu-governor"
+    "aether-desktop-recovery"
+)
+
+for tool in "${v23_tools[@]}"; do
+    check_script_exists "$tool"
+    test_result "v2.3: $tool exists and is executable" $?
+    
+    check_error_handling "$tool"
+    test_result "v2.3: $tool has error handling" $?
+    
+    check_help_option "$tool"
+    test_result "v2.3: $tool has help option" $?
+done
+
+echo ""
+
 # Support Scripts
 echo -e "${COLOR_YELLOW}Testing Support Scripts...${COLOR_RESET}"
 support_tools=(
