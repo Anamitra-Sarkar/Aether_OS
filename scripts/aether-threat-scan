@@ -12,6 +12,8 @@ set -euo pipefail
 readonly VERSION="1.0.0"
 readonly LOG_DIR="${HOME}/.local/share/aetheros/logs"
 readonly CACHE_DIR="${HOME}/.cache/aetheros"
+readonly SYSTEM_LOG_DIR="/var/log/aetheros"
+readonly USER_SUMMARY_DIR="${HOME}/.local/share/aetheros/security-reports"
 readonly RED="\033[0;31m"
 readonly YELLOW="\033[0;33m"
 readonly GREEN="\033[0;32m"
@@ -22,6 +24,12 @@ readonly RESET="\033[0m"
 
 # JSON output flag
 JSON_OUTPUT=false
+FAIL_ON_HIGH=false
+LOG_DIR_OVERRIDE=""
+LOGGING_READY=false
+EXECUTION_FAILURE=0
+PARTIAL_FAILURE=0
+LOG_TARGET=""
 
 # Risk counters
 HIGH_RISK=0
@@ -34,12 +42,82 @@ declare -a JSON_FINDINGS=()
 # =============================================================================
 # Utility Functions
 # =============================================================================
+init_logging() {
+    local target_dir=${LOG_DIR_OVERRIDE:-$SYSTEM_LOG_DIR}
+
+    if [[ ! -d "$target_dir" ]]; then
+        mkdir -p "$target_dir" 2>/dev/null || {
+            if [[ "${AETHER_THREAT_DISABLE_SUDO:-0}" != "1" ]] && command -v sudo &>/dev/null; then
+                sudo mkdir -p "$target_dir" 2>/dev/null || true
+            fi
+        }
+    fi
+
+    LOG_TARGET="${target_dir}/threat-scan.log"
+
+    if [[ -d "$target_dir" ]]; then
+        if touch "$LOG_TARGET" 2>/dev/null; then
+            LOGGING_READY=true
+        elif [[ "${AETHER_THREAT_DISABLE_SUDO:-0}" != "1" ]] && command -v sudo &>/dev/null; then
+            echo "" | sudo tee -a "$LOG_TARGET" >/dev/null && LOGGING_READY=true || LOGGING_READY=false
+        fi
+    fi
+
+    if [[ "$LOGGING_READY" != "true" ]]; then
+        EXECUTION_FAILURE=1
+    fi
+}
+
+log_to_file() {
+    local message=$1
+
+    [[ "$LOGGING_READY" != "true" ]] && return
+
+    if [[ -w "$LOG_TARGET" ]]; then
+        echo "$message" >> "$LOG_TARGET" 2>/dev/null || EXECUTION_FAILURE=1
+    elif [[ "${AETHER_THREAT_DISABLE_SUDO:-0}" != "1" ]] && command -v sudo &>/dev/null; then
+        echo "$message" | sudo tee -a "$LOG_TARGET" >/dev/null || EXECUTION_FAILURE=1
+    else
+        EXECUTION_FAILURE=1
+    fi
+}
+
+require_command() {
+    local cmd=$1
+    local label=$2
+    local upper_cmd
+    upper_cmd=$(printf '%s' "$cmd" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')
+    local var_name="AETHER_THREAT_FORCE_MISSING_${upper_cmd}"
+    local forced_missing
+    forced_missing=$(printenv "$var_name" 2>/dev/null || echo "0")
+    local global_missing
+    global_missing=$(printenv "AETHER_THREAT_FORCE_MISSING" 2>/dev/null || echo "0")
+
+    if [[ "$forced_missing" == "1" ]] || [[ "$global_missing" == "1" ]]; then
+        PARTIAL_FAILURE=1
+        log_to_file "Missing dependency forced for $label ($cmd)"
+        return 1
+    fi
+
+    if ! command -v "$cmd" &>/dev/null; then
+        PARTIAL_FAILURE=1
+        if [[ "$JSON_OUTPUT" == "false" ]]; then
+            echo -e "${YELLOW}[WARN]${RESET} Missing dependency for ${label}: $cmd"
+        fi
+        log_to_file "WARN: Missing dependency for ${label}: $cmd"
+        return 1
+    fi
+
+    return 0
+}
+
 log_header() {
     if [[ "$JSON_OUTPUT" == "false" ]]; then
         echo -e "\n${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
         echo -e "${CYAN}${BOLD}$1${RESET}"
         echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     fi
+    log_to_file "$1"
 }
 
 log_finding() {
@@ -76,6 +154,8 @@ log_finding() {
         echo -e "  Risk: $risk"
         echo -e "  Remediation: $remediation"
     fi
+
+    log_to_file "[${severity}] ${category} - ${finding} | ${risk} | ${remediation}"
 }
 
 # =============================================================================
@@ -85,55 +165,54 @@ log_finding() {
 # Scan for open and listening services
 scan_listening_services() {
     log_header "Scanning Open & Listening Services"
-    
-    # Use ss to get listening ports (more efficient than netstat)
-    if command -v ss &>/dev/null; then
-        # Get TCP and UDP listening ports
-        while IFS= read -r line; do
-            # Parse ss output: Proto State Recv-Q Send-Q Local-Address:Port Peer-Address:Port Process
-            local proto=$(echo "$line" | awk '{print $1}')
-            local local_addr=$(echo "$line" | awk '{print $5}')
-            local process=$(echo "$line" | awk '{print $7}' | sed 's/users:((//' | sed 's/).*//' | cut -d',' -f1 | tr -d '"')
-            
-            # Extract IP and port
-            local ip=$(echo "$local_addr" | rev | cut -d':' -f2- | rev)
-            local port=$(echo "$local_addr" | rev | cut -d':' -f1 | rev)
-            
-            # Skip if no process info
-            [[ -z "$process" ]] && continue
-            
-            # Check if exposed on non-loopback
-            if [[ ! "$ip" =~ ^127\. ]] && [[ "$ip" != "::1" ]] && [[ "$ip" != "[::1]" ]]; then
-                local severity="MEDIUM"
-                
-                # High risk ports
-                if [[ "$port" =~ ^(21|23|25|110|143|445|3389|5900)$ ]]; then
-                    severity="HIGH"
-                fi
-                
-                log_finding "$severity" "Exposed Service" \
-                    "Service '$process' listening on $proto $local_addr" \
-                    "Service is accessible from network interfaces, potentially exposing the system to external attacks" \
-                    "Review if service needs network exposure. Consider binding to 127.0.0.1 or using firewall rules: sudo ufw deny $port/$proto"
-            fi
-        done < <(ss -tulpn 2>/dev/null | grep LISTEN || true)
+
+    if ! require_command "ss" "Listening services"; then
+        return 0
     fi
+    
+    # Get TCP and UDP listening ports
+    while IFS= read -r line; do
+        # Parse ss output: Proto State Recv-Q Send-Q Local-Address:Port Peer-Address:Port Process
+        local proto=$(echo "$line" | awk '{print $1}')
+        local local_addr=$(echo "$line" | awk '{print $5}')
+        local process=$(echo "$line" | awk '{print $7}' | sed 's/users:((//' | sed 's/).*//' | cut -d',' -f1 | tr -d '"')
+        
+        # Extract IP and port
+        local ip=$(echo "$local_addr" | rev | cut -d':' -f2- | rev)
+        local port=$(echo "$local_addr" | rev | cut -d':' -f1 | rev)
+        
+        # Skip if no process info
+        [[ -z "$process" ]] && continue
+        
+        # Check if exposed on non-loopback
+        if [[ ! "$ip" =~ ^127\. ]] && [[ "$ip" != "::1" ]] && [[ "$ip" != "[::1]" ]]; then
+            local severity="MEDIUM"
+            
+            # High risk ports
+            if [[ "$port" =~ ^(21|23|25|110|143|445|3389|5900)$ ]]; then
+                severity="HIGH"
+            fi
+            
+            log_finding "$severity" "Exposed Service" \
+                "Service '$process' listening on $proto $local_addr" \
+                "Service is accessible from network interfaces, potentially exposing the system to external attacks" \
+                "Review if service needs network exposure. Consider binding to 127.0.0.1 or using firewall rules: sudo ufw deny $port/$proto"
+        fi
+    done < <(ss -tulpn 2>/dev/null | grep LISTEN || true)
     
     # Check for services on privileged ports exposed externally
-    if command -v ss &>/dev/null; then
-        while IFS= read -r line; do
-            local port=$(echo "$line" | awk '{print $5}' | rev | cut -d':' -f1 | rev)
-            local ip=$(echo "$line" | awk '{print $5}' | rev | cut -d':' -f2- | rev)
-            local process=$(echo "$line" | awk '{print $7}' | sed 's/users:((//' | sed 's/).*//' | cut -d',' -f1 | tr -d '"')
-            
-            if [[ "$port" =~ ^[0-9]+$ ]] && [[ "$port" -lt 1024 ]] && [[ ! "$ip" =~ ^127\. ]]; then
-                log_finding "MEDIUM" "Privileged Port Exposure" \
-                    "Service '$process' on privileged port $port accessible from network" \
-                    "Privileged ports below 1024 require root access and may indicate critical services exposed" \
-                    "Verify service legitimacy and consider firewall restrictions"
-            fi
-        done < <(ss -tulpn 2>/dev/null | grep LISTEN || true)
-    fi
+    while IFS= read -r line; do
+        local port=$(echo "$line" | awk '{print $5}' | rev | cut -d':' -f1 | rev)
+        local ip=$(echo "$line" | awk '{print $5}' | rev | cut -d':' -f2- | rev)
+        local process=$(echo "$line" | awk '{print $7}' | sed 's/users:((//' | sed 's/).*//' | cut -d',' -f1 | tr -d '"')
+        
+        if [[ "$port" =~ ^[0-9]+$ ]] && [[ "$port" -lt 1024 ]] && [[ ! "$ip" =~ ^127\. ]]; then
+            log_finding "MEDIUM" "Privileged Port Exposure" \
+                "Service '$process' on privileged port $port accessible from network" \
+                "Privileged ports below 1024 require root access and may indicate critical services exposed" \
+                "Verify service legitimacy and consider firewall restrictions"
+        fi
+    done < <(ss -tulpn 2>/dev/null | grep LISTEN || true)
 }
 
 # Scan for SUID/SGID binaries
@@ -428,6 +507,15 @@ EOF
         fi
         echo ""
     fi
+
+    log_to_file "Overall risk: $(calculate_overall_risk) | High: $HIGH_RISK Medium: $MEDIUM_RISK Low: $LOW_RISK"
+}
+
+persist_user_summary() {
+    mkdir -p "$USER_SUMMARY_DIR" 2>/dev/null || true
+    if [[ -f "$LOG_TARGET" ]]; then
+        cp "$LOG_TARGET" "${USER_SUMMARY_DIR}/threat-scan.log" 2>/dev/null || true
+    fi
 }
 
 show_help() {
@@ -439,9 +527,11 @@ USAGE:
     aether-threat-scan [OPTIONS]
 
 OPTIONS:
-    --json          Output results in JSON format
-    --help          Show this help message
-    --version       Show version information
+    --json              Output results in JSON format
+    --fail-on-high      Exit non-zero if high risk is detected
+    --log-dir <path>    Override log directory (default: /var/log/aetheros)
+    --help              Show this help message
+    --version           Show version information
 
 DESCRIPTION:
     Performs a fast, offline, deterministic assessment of the system's
@@ -459,6 +549,7 @@ OUTPUT:
     • Categorized findings
     • Risk explanations
     • Exact remediation commands
+    • Primary logs at /var/log/aetheros/threat-scan.log (or --log-dir override)
 
 EXAMPLES:
     # Run basic scan
@@ -488,6 +579,14 @@ main() {
                 JSON_OUTPUT=true
                 shift
                 ;;
+            --fail-on-high)
+                FAIL_ON_HIGH=true
+                shift
+                ;;
+            --log-dir)
+                LOG_DIR_OVERRIDE="$2"
+                shift 2
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -504,6 +603,8 @@ main() {
         esac
     done
     
+    init_logging
+
     # Print header
     if [[ "$JSON_OUTPUT" == "false" ]]; then
         echo -e "${CYAN}${BOLD}"
@@ -516,12 +617,25 @@ main() {
     
     # Record start time
     local start_time=$(date +%s)
+
+    # Simulated partial failure (for tests)
+    if [[ "${AETHER_THREAT_SIMULATE_PARTIAL:-0}" == "1" ]]; then
+        PARTIAL_FAILURE=1
+        log_to_file "WARN: Partial scan simulation enabled"
+    fi
     
     # Run scans
-    scan_listening_services
-    scan_suid_sgid
-    scan_filesystem_permissions
-    scan_configuration_weaknesses
+    set +e
+    scan_listening_services || EXECUTION_FAILURE=1
+    scan_suid_sgid || EXECUTION_FAILURE=1
+    scan_filesystem_permissions || EXECUTION_FAILURE=1
+    scan_configuration_weaknesses || EXECUTION_FAILURE=1
+    set -e
+
+    # Allow forced high-risk finding for testing strict mode
+    if [[ "${AETHER_THREAT_FORCE_HIGH:-0}" == "1" ]]; then
+        log_finding "HIGH" "Test Harness" "Forced high-risk finding" "Simulated high risk for testing" "No action required"
+    fi
     
     # Calculate execution time
     local end_time=$(date +%s)
@@ -529,6 +643,9 @@ main() {
     
     # Print summary
     print_summary
+
+    log_to_file "Scan completed in ${duration}s"
+    persist_user_summary
     
     # Print execution time
     if [[ "$JSON_OUTPUT" == "false" ]]; then
@@ -536,13 +653,16 @@ main() {
     fi
     
     # Exit with appropriate code
-    if [[ $HIGH_RISK -gt 0 ]]; then
-        exit 2
-    elif [[ $MEDIUM_RISK -gt 0 ]]; then
-        exit 1
-    else
-        exit 0
+    local exit_code=0
+    if [[ $EXECUTION_FAILURE -ne 0 ]] || [[ $PARTIAL_FAILURE -ne 0 ]]; then
+        exit_code=2
     fi
+
+    if [[ "$FAIL_ON_HIGH" == "true" ]] && [[ $HIGH_RISK -gt 0 ]]; then
+        exit_code=3
+    fi
+
+    exit $exit_code
 }
 
 main "$@"

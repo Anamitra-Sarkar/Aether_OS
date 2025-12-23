@@ -28,6 +28,8 @@ readonly RESET="\033[0m"
 readonly MAX_CRASHES_PER_HOUR=3
 readonly CRASH_WINDOW_SECONDS=3600
 readonly RESTART_DELAY_SECONDS=2
+readonly REPEAT_CRASH_THRESHOLD=2
+readonly COREDUMP_DIR="/var/lib/systemd/coredump"
 
 # =============================================================================
 # Utility Functions
@@ -319,97 +321,69 @@ fallback_to_x11() {
 }
 
 # =============================================================================
-# Monitor Mode (for systemd service)
+# Event-Driven Crash Handling
 # =============================================================================
-monitor_mode() {
-    log_info "Starting desktop recovery monitor..."
-    log_to_file "Monitor started"
-    
-    # Initial detection
-    local last_compositor=$(detect_compositor)
-    local last_shell=$(detect_shell)
-    
-    log_info "Monitoring compositor: ${last_compositor:-none}"
-    log_info "Monitoring shell: ${last_shell:-none}"
-    
-    # Monitor loop
-    while true; do
-        sleep 5
-        
-        # Check compositor
-        local current_compositor=$(detect_compositor)
-        
-        # Detect compositor crash
-        if [[ -n "$last_compositor" ]] && [[ -z "$current_compositor" ]]; then
-            log_error "Compositor crash detected: $last_compositor"
-            
-            # Record crash
-            local crash_count=$(record_crash)
-            
-            # Check if too many crashes
-            if [[ $crash_count -ge $MAX_CRASHES_PER_HOUR ]]; then
-                log_error "Too many crashes ($crash_count in last hour)"
-                fallback_to_x11
-                exit 1
-            fi
-            
-            # Attempt recovery
+process_crash_event() {
+    local crashed_process=${1:-unknown}
+    log_error "Crash event detected: ${crashed_process}"
+    local crash_count
+    crash_count=$(record_crash)
+
+    # Single notification per incident
+    send_notification "Desktop Recovery" \
+        "Crash detected for ${crashed_process}. Applying recovery policy." \
+        "normal"
+
+    # Too many crashes → fallback
+    if [[ $crash_count -ge $MAX_CRASHES_PER_HOUR ]] || [[ $crash_count -ge $REPEAT_CRASH_THRESHOLD ]]; then
+        log_error "Crash threshold reached ($crash_count in last hour)"
+        fallback_to_x11
+        return 1
+    fi
+
+    # First crash: restart shell only
+    local shell=$(detect_shell)
+    if [[ -n "$shell" ]]; then
+        if restart_shell "$shell"; then
             send_notification "Desktop Recovery" \
-                "Compositor crashed. Attempting automatic recovery..." \
+                "Desktop shell restarted after crash (${crashed_process})." \
                 "normal"
-            
-            if restart_compositor "$last_compositor"; then
-                send_notification "Desktop Recovery" \
-                    "Compositor recovered successfully." \
-                    "normal"
-                current_compositor="$last_compositor"
-            else
-                log_error "Compositor recovery failed"
-                
-                # Try fallback
-                if [[ $crash_count -ge 2 ]]; then
-                    fallback_to_x11
-                    exit 1
-                fi
-            fi
+            return 0
         fi
-        
-        last_compositor="$current_compositor"
-        
-        # Check shell
-        local current_shell=$(detect_shell)
-        
-        # Detect shell crash
-        if [[ -n "$last_shell" ]] && [[ -z "$current_shell" ]]; then
-            log_error "Desktop shell crash detected: $last_shell"
-            
-            # Record crash
-            local crash_count=$(record_crash)
-            
-            # Check if too many crashes
-            if [[ $crash_count -ge $MAX_CRASHES_PER_HOUR ]]; then
-                log_error "Too many crashes ($crash_count in last hour)"
-                fallback_to_x11
-                exit 1
-            fi
-            
-            # Attempt recovery
-            send_notification "Desktop Recovery" \
-                "Desktop shell crashed. Attempting automatic recovery..." \
-                "normal"
-            
-            if restart_shell "$last_shell"; then
-                send_notification "Desktop Recovery" \
-                    "Desktop shell recovered successfully." \
-                    "normal"
-                current_shell="$last_shell"
-            else
-                log_error "Shell recovery failed"
-            fi
+    fi
+
+    # If no shell detected, try compositor restart as best-effort
+    local compositor=$(detect_compositor)
+    if [[ -n "$compositor" ]]; then
+        restart_compositor "$compositor" || true
+    fi
+
+    return 1
+}
+
+process_coredump() {
+    local core_path=${1:-}
+    local crashed_process="unknown"
+
+    if [[ -n "$core_path" ]] && [[ -f "$core_path" ]]; then
+        local core_name
+        core_name=$(basename "$core_path")
+        crashed_process=${core_name#core.}
+        crashed_process=${crashed_process%%.*}
+    else
+        # Try newest core in systemd coredump directory
+        local latest_core
+        latest_core=$(find "${COREDUMP_DIR}" -maxdepth 1 -name 'core.*' -printf '%T@ %f\n' 2>/dev/null | sort -nr | head -1 | awk '{print $2}' || true)
+        [[ -n "$latest_core" ]] && latest_core="${COREDUMP_DIR}/${latest_core}"
+        if [[ -n "$latest_core" ]]; then
+            local core_name
+            core_name=$(basename "$latest_core")
+            crashed_process=${core_name#core.}
+            crashed_process=${crashed_process%%.*}
         fi
-        
-        last_shell="$current_shell"
-    done
+    fi
+
+    process_crash_event "$crashed_process"
 }
 
 # =============================================================================
@@ -535,7 +509,8 @@ USAGE:
 
 COMMANDS:
     status              Show current desktop and recovery status
-    monitor             Run in monitor mode (for systemd service)
+    handle-crash [proc] Handle a crash event (coredump/journal hook)
+    handle-coredump     Process the latest coredump event
     restart-shell       Manually restart desktop shell
     restart-compositor  Manually restart compositor
     reset               Reset crash history and re-enable Wayland
@@ -547,9 +522,9 @@ DESCRIPTION:
     crashes without forcing logout or killing user applications.
 
 FEATURES:
-    • Automatic crash detection
-    • Intelligent restart with rate limiting
-    • Fallback to X11 after repeated failures
+    • Event-driven crash handling via coredump/journal hooks
+    • First-crash restart policy (shell only)
+    • Fallback to X11 after repeated failures (no login loops)
     • Preserves running applications
     • Single notification per incident
 
@@ -601,8 +576,11 @@ main() {
         status)
             cmd_status "$@"
             ;;
-        monitor)
-            monitor_mode "$@"
+        handle-crash)
+            process_crash_event "$@"
+            ;;
+        handle-coredump)
+            process_coredump "$@"
             ;;
         restart-shell)
             cmd_restart_shell "$@"

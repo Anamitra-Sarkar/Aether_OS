@@ -43,9 +43,13 @@ aether-threat-scan --json > security-report.json
 - Passive inspection only
 
 ### Exit Codes
-- `0`: No critical issues (Low risk)
-- `1`: Medium risk findings present
-- `2`: High risk findings present
+- `0`: Scan completed (risk is reported in output only)
+- Non-zero: Execution, permission, or logging failure
+- `--fail-on-high`: Optional strict mode to return non-zero when high risk is detected
+
+### Logging
+- Primary log location: `/var/log/aetheros/threat-scan.log`
+- User-readable summary mirror: `~/.local/share/aetheros/security-reports/threat-scan.log`
 
 ---
 
@@ -85,6 +89,7 @@ sudo aether-boot-optimize rollback
 - **Safety Guarantees**: Never modifies boot-critical services
 - **Full Transparency**: Generates detailed reports with rollback instructions
 - **Reversibility**: One-command rollback of all changes
+- **Guardrails**: Dependency safety validation and pre-apply checks abort on ambiguity
 
 ### Protected Services (Never Modified)
 - Display managers (SDDM, GDM, LightDM)
@@ -93,6 +98,11 @@ sudo aether-boot-optimize rollback
 - Audio stack (PulseAudio, PipeWire)
 - Input devices
 - Security services
+
+### Safety Model
+- Dependency checks ensure no protected service relies on a candidate
+- Every optimization step requires a passed safety assertion; otherwise no change is made
+- Rollback restores the original enablement and active state recorded before changes
 
 ### Workflow
 1. Profile boot metrics (automatic on first run)
@@ -128,10 +138,11 @@ aether-cpu-governor list
 ```
 
 ### Features
-- **Context Detection**: Battery state, thermal state, foreground app category, CPU load
+- **Context Detection**: Battery state, thermal state, CPU load; optional foreground hints (opt-in)
 - **Rule-Based Selection**: Deterministic governor mapping (no ML)
 - **Manual Override**: Lock to specific governor until cleared
 - **Cross-Platform**: Supports Intel, AMD, and ARM CPUs (where cpufreq is available)
+- **Oscillation Protection**: Minimum dwell time between automatic changes
 
 ### Governor Selection Rules
 
@@ -154,6 +165,11 @@ sudo aether-cpu-governor auto
 ```
 
 Override persists until manually cleared with `auto` command.
+
+### Foreground Context
+- Foreground detection is disabled by default to avoid compositor assumptions
+- Enable heuristics explicitly via `AETHER_GOVERNOR_FOREGROUND=true`
+- Automatic mode honors manual overrides until resumed with `auto --resume`
 
 ---
 
@@ -179,30 +195,27 @@ aether-desktop-recovery restart-compositor
 
 # Reset crash history and re-enable Wayland
 aether-desktop-recovery reset
-
-# Run in monitor mode (systemd service)
-aether-desktop-recovery monitor
 ```
 
 ### Features
-- **Automatic Crash Detection**: Monitors compositor and desktop shell processes
-- **Intelligent Restart**: Auto-restarts with rate limiting (max 3 crashes/hour)
+- **Event-Driven Crash Handling**: Triggered by coredump/path events (no polling)
+- **Deterministic Restart**: First crash restarts shell only with rate limiting
 - **Fallback to X11**: Switches to X11 after repeated failures
 - **Application Preservation**: Never kills user applications
 - **Single Notification**: One notification per incident (no spam)
 
 ### Systemd Service
-The desktop recovery monitor runs as a user systemd service:
+The desktop recovery handler runs as a user systemd service with a path trigger:
 
 ```bash
-# Enable the service (done automatically during installation)
-systemctl --user enable aether-desktop-recovery.service
+# Enable the handler and watcher (done automatically during installation)
+systemctl --user enable aether-desktop-recovery.service aether-desktop-recovery.path
 
-# Start the service
-systemctl --user start aether-desktop-recovery.service
+# Start the handler path
+systemctl --user start aether-desktop-recovery.path
 
 # Check service status
-systemctl --user status aether-desktop-recovery.service
+systemctl --user status aether-desktop-recovery.path
 ```
 
 ### Recovery Behavior

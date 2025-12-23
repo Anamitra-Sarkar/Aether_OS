@@ -33,6 +33,10 @@ readonly -a BOOT_CRITICAL=(
     "display-manager.service"
     "NetworkManager.service"
     "systemd-networkd.service"
+    "systemd-udevd.service"
+    "systemd-udev-trigger.service"
+    "systemd-udevd-control.socket"
+    "systemd-udevd-kernel.socket"
     "dbus.service"
     "systemd-logind.service"
     "pulseaudio.service"
@@ -40,7 +44,13 @@ readonly -a BOOT_CRITICAL=(
     "bluetooth.service"
     "upower.service"
     "polkit.service"
+    "apparmor.service"
+    "auditd.service"
+    "firewalld.service"
+    "ufw.service"
 )
+
+declare -A PROTECTED_DEP_CACHE=()
 
 # =============================================================================
 # Utility Functions
@@ -69,6 +79,40 @@ log_header() {
 
 ensure_directories() {
     mkdir -p "$DATA_DIR" "$BACKUP_DIR"
+}
+
+dependency_safe_to_disable() {
+    local candidate=$1
+
+    for protected in "${BOOT_CRITICAL[@]}"; do
+        # Ensure dependency resolution works; abort on uncertainty
+        local deps
+        if [[ -n "${PROTECTED_DEP_CACHE[$protected]:-}" ]]; then
+            deps="${PROTECTED_DEP_CACHE[$protected]}"
+        elif ! deps=$(systemctl list-dependencies "$protected" --plain 2>/dev/null); then
+            log_error "Unable to resolve dependencies for $protected. Aborting optimization."
+            return 2
+        else
+            PROTECTED_DEP_CACHE[$protected]="$deps"
+        fi
+
+        local matched=false
+        while IFS= read -r dep; do
+            dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [[ -z "$dep" ]] && continue
+            if [[ "$dep" == "$candidate" ]]; then
+                matched=true
+                break
+            fi
+        done <<< "$deps"
+
+        if [[ "$matched" == "true" ]]; then
+            log_warn "Protected service $protected depends on $candidate; skipping."
+            return 1
+        fi
+    done
+
+    return 0
 }
 
 is_boot_critical() {
@@ -198,6 +242,7 @@ apply_optimizations() {
     fi
     
     local -a applied=()
+    local unsafe_abort=false
     
     for target_info in $targets; do
         local service=$(echo "$target_info" | cut -d':' -f1)
@@ -206,6 +251,16 @@ apply_optimizations() {
         # Double-check not boot-critical
         if is_boot_critical "$service"; then
             log_warn "Skipping boot-critical service: $service"
+            continue
+        fi
+
+        # Dependency validation
+        local dep_status
+        dep_status=$(dependency_safe_to_disable "$service") || dep_status=$?
+        if [[ "$dep_status" -eq 2 ]]; then
+            unsafe_abort=true
+            break
+        elif [[ "$dep_status" -eq 1 ]]; then
             continue
         fi
         
@@ -217,25 +272,35 @@ apply_optimizations() {
         
         # Backup current state
         local backup_file="${BACKUP_DIR}/${service}.backup"
+        local current_state="enabled"
+        current_state=$(systemctl is-enabled "$service" 2>/dev/null || echo "unknown")
+        local current_active="unknown"
+        current_active=$(systemctl is-active "$service" 2>/dev/null || echo "unknown")
         if [[ "$dry_run" == "false" ]]; then
             systemctl show "$service" > "$backup_file" 2>/dev/null || true
         fi
         
         log_info "Optimizing: $service (saves ${time_ms}ms)"
-        
+
         if [[ "$dry_run" == "false" ]]; then
             # Try to disable service
             if systemctl disable "$service" 2>/dev/null; then
                 log_success "Disabled: $service"
-                applied+=("$service:disabled")
+                applied+=("v2|$service|disabled|state=${current_state}|active=${current_active}")
             else
                 log_warn "Failed to disable: $service"
             fi
         else
             log_info "Would disable: $service"
-            applied+=("$service:would-disable")
+            applied+=("v2|$service|would-disable")
         fi
     done
+
+    if [[ "$unsafe_abort" == "true" ]]; then
+        log_error "Optimization aborted due to unresolved dependency safety."
+        echo "0"
+        return 0
+    fi
     
     # Save applied changes
     if [[ "$dry_run" == "false" ]] && [[ ${#applied[@]} -gt 0 ]]; then
@@ -272,17 +337,43 @@ rollback_optimizations() {
         [[ "$line" =~ ^# ]] && continue
         [[ -z "$line" ]] && continue
         
-        local service=$(echo "$line" | cut -d':' -f1)
-        local action=$(echo "$line" | cut -d':' -f2)
+        local delimiter="|"
+        [[ "$line" != *"|"* ]] && delimiter=":"
+
+        local service action state_field active_field previous_state previous_active remainder
+        IFS="$delimiter" read -r service action state_field active_field remainder <<< "$line"
+
+        if [[ "$delimiter" == "|" ]] && [[ "$service" == "v2" ]]; then
+            service="$action"
+            action="$state_field"
+            state_field="$active_field"
+            active_field="$remainder"
+        fi
+
+        if [[ "$delimiter" == "|" ]]; then
+            previous_state=$(echo "${state_field:-}" | sed 's/^state=//')
+            previous_active=$(echo "${active_field:-}" | sed 's/^active=//')
+        else
+            previous_state=$(echo "$line" | cut -d':' -f4)
+            previous_active=$(echo "$line" | cut -d':' -f6)
+        fi
+
+        [[ "$action" == "would-disable" ]] && continue
         
         if [[ "$action" == "disabled" ]]; then
             log_info "Re-enabling: $service"
             
-            if systemctl enable "$service" 2>/dev/null; then
-                log_success "Restored: $service"
-                ((rollback_count++))
-            else
-                log_warn "Failed to restore: $service"
+            if [[ "$previous_state" != "disabled" ]] && [[ "$previous_state" != "static" ]]; then
+                if systemctl enable "$service" 2>/dev/null; then
+                    log_success "Restored enablement: $service"
+                    ((rollback_count++))
+                else
+                    log_warn "Failed to restore enablement: $service"
+                fi
+            fi
+
+            if [[ "$previous_active" == "active" ]]; then
+                systemctl start "$service" 2>/dev/null || log_warn "Failed to restart active service: $service"
             fi
         fi
     done < "$APPLIED_CHANGES"

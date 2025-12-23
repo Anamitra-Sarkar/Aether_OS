@@ -13,6 +13,9 @@ readonly VERSION="1.0.0"
 readonly STATE_DIR="${HOME}/.local/share/aetheros/cpu-governor"
 readonly OVERRIDE_FILE="${STATE_DIR}/manual-override"
 readonly LOG_FILE="${STATE_DIR}/governor.log"
+readonly LAST_CHANGE_FILE="${STATE_DIR}/last-automatic-change"
+readonly MIN_DWELL_SECONDS=30
+readonly FOREGROUND_ALLOWED="${AETHER_GOVERNOR_FOREGROUND:-false}"
 
 readonly RED="\033[0;31m"
 readonly YELLOW="\033[0;33m"
@@ -183,7 +186,13 @@ detect_thermal_state() {
 }
 
 detect_foreground_app() {
-    # Try to detect foreground application category
+    # Foreground detection is optional and must be explicitly enabled
+    if [[ "$FOREGROUND_ALLOWED" != "true" ]]; then
+        echo "unknown"
+        return
+    fi
+
+    # Try to detect foreground application category (best-effort, non-deterministic)
     local app_type="desktop"
     
     # Check for gaming applications
@@ -378,9 +387,25 @@ get_override() {
 # =============================================================================
 cmd_auto() {
     log_info "Setting governor automatically based on system context..."
-    
-    # Clear any override
-    clear_override
+    local allow_resume=false
+    ensure_directories
+    for arg in "$@"; do
+        if [[ "$arg" == "--resume" ]]; then
+            allow_resume=true
+        fi
+    done
+
+    # Respect manual override unless explicitly resumed
+    local current_override=$(get_override)
+    if [[ -n "$current_override" ]] && [[ "$allow_resume" == "false" ]]; then
+        log_warn "Manual override '$current_override' active - automation paused"
+        log_info "Run 'aether-cpu-governor auto --resume' to re-enable automation"
+        return 0
+    fi
+
+    if [[ "$allow_resume" == "true" ]]; then
+        clear_override
+    fi
     
     # Detect optimal governor
     local result=$(select_optimal_governor)
@@ -389,9 +414,24 @@ cmd_auto() {
     
     log_info "Selected: $governor"
     log_info "Reason: $reason"
-    
+
+    # Oscillation protection
+    local now=$(date +%s)
+    local last_change="0"
+    if [[ -f "$LAST_CHANGE_FILE" ]]; then
+        read -r last_change < "$LAST_CHANGE_FILE" || last_change="0"
+        [[ "$last_change" =~ ^[0-9]+$ ]] || last_change="0"
+    fi
+    local elapsed=$((now - last_change))
+    if [[ $elapsed -lt $MIN_DWELL_SECONDS ]]; then
+        log_warn "Dwell timer active (${elapsed}s < ${MIN_DWELL_SECONDS}s); skipping change"
+        return 0
+    fi
+
     # Set the governor
-    set_governor "$governor"
+    if set_governor "$governor"; then
+        echo "$now" > "$LAST_CHANGE_FILE"
+    fi
 }
 
 cmd_set() {
@@ -459,7 +499,12 @@ cmd_status() {
     echo -e "  Battery: $(detect_battery_state)"
     echo -e "  Thermal: $(detect_thermal_state)"
     echo -e "  Load: $(detect_cpu_load)"
-    echo -e "  App Category: $(detect_foreground_app)"
+    local app_category=$(detect_foreground_app)
+    if [[ "$app_category" == "unknown" ]] && [[ "$FOREGROUND_ALLOWED" != "true" ]]; then
+        echo -e "  App Category: unavailable (foreground detection disabled)"
+    else
+        echo -e "  App Category: $app_category"
+    fi
 }
 
 cmd_list() {
@@ -550,6 +595,8 @@ NOTES:
     • Requires root/sudo to change governors
     • Manual override persists until cleared with 'auto'
     • Supports Intel, AMD, and ARM CPUs (where cpufreq is available)
+    • Foreground heuristics are disabled by default; set AETHER_GOVERNOR_FOREGROUND=true to allow them
+    • Use 'auto --resume' to explicitly clear a manual override
 
 EOF
 }

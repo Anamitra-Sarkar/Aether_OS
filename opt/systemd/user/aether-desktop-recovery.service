@@ -1,14 +1,12 @@
 [Unit]
-Description=AetherOS Desktop Recovery Monitor
+Description=AetherOS Desktop Recovery Event Handler
 Documentation=man:aether-desktop-recovery(1)
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
-Type=simple
-ExecStart=/usr/share/aetheros/scripts/aether-desktop-recovery monitor
-Restart=on-failure
-RestartSec=5
+Type=oneshot
+ExecStart=/usr/share/aetheros/scripts/aether-desktop-recovery handle-coredump
 
 # Don't restart display manager
 # Don't kill user applications
